@@ -88,7 +88,7 @@ static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
   if (unsigned BitWidth = Ty->getScalarSizeInBits())
     return BitWidth;
 
-  return DL.getIndexTypeSizeInBits(Ty);
+  return DL.getPointerTypeSizeInBits(Ty);
 }
 
 namespace {
@@ -1123,13 +1123,9 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
   case Instruction::Trunc: {
     Type *SrcTy = I->getOperand(0)->getType();
 
-    unsigned SrcBitWidth;
     // Note that we handle pointer operands here because of inttoptr/ptrtoint
     // which fall through here.
-    Type *ScalarTy = SrcTy->getScalarType();
-    SrcBitWidth = ScalarTy->isPointerTy() ?
-      Q.DL.getIndexTypeSizeInBits(ScalarTy) :
-      Q.DL.getTypeSizeInBits(ScalarTy);
+    unsigned SrcBitWidth = getBitWidth(SrcTy, Q.DL);
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
     Known = Known.zextOrTrunc(SrcBitWidth, false);
@@ -1634,9 +1630,7 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
           V->getType()->isPtrOrPtrVectorTy()) &&
          "Not integer or pointer type!");
 
-  Type *ScalarTy = V->getType()->getScalarType();
-  unsigned ExpectedWidth = ScalarTy->isPointerTy() ?
-    Q.DL.getIndexTypeSizeInBits(ScalarTy) : Q.DL.getTypeSizeInBits(ScalarTy);
+  unsigned ExpectedWidth = getBitWidth(V->getType(), Q.DL);
   assert(ExpectedWidth == BitWidth && "V and Known should have same BitWidth");
   (void)BitWidth;
   (void)ExpectedWidth;
@@ -2104,7 +2098,7 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
         Q.DL.getTypeSizeInBits(P2I->getDestTy()))
       return isKnownNonZero(P2I->getOperand(0), Depth, Q);
 
-  unsigned BitWidth = getBitWidth(V->getType()->getScalarType(), Q.DL);
+  unsigned BitWidth = getBitWidth(V->getType(), Q.DL);
 
   // X | Y != 0 if X != 0 or Y != 0.
   Value *X = nullptr, *Y = nullptr;
@@ -2370,10 +2364,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
   // in V, so for undef we have to conservatively return 1.  We don't have the
   // same behavior for poison though -- that's a FIXME today.
 
-  Type *ScalarTy = V->getType()->getScalarType();
-  unsigned TyBits = ScalarTy->isPointerTy() ?
-    Q.DL.getIndexTypeSizeInBits(ScalarTy) :
-    Q.DL.getTypeSizeInBits(ScalarTy);
+  unsigned TyBits = getBitWidth(V->getType(), Q.DL);
 
   unsigned Tmp, Tmp2;
   unsigned FirstAnswer = 1;
