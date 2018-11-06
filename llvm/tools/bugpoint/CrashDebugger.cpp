@@ -48,10 +48,19 @@ cl::opt<bool> NoAttributeRM("disable-attribute-remove",
                          cl::desc("Do not remove function attributes"),
                          cl::init(false));
 
-cl::opt<bool> ReplaceFuncsWithNull(
-    "replace-funcs-with-null",
-    cl::desc("When stubbing functions, replace all uses will null"),
-    cl::init(false));
+enum StubbingMethods {
+  Null,
+  EmptyBody,
+  Delete,
+};
+static cl::opt<StubbingMethods> StubbingMethod(
+  "stubbing-method", cl::desc("How to stub the functions we're not testing"),
+  cl::values(
+    clEnumValN(StubbingMethods::Delete , "delete", "Delete definitions, leaving declarations (default)"),
+    clEnumValN(StubbingMethods::Null, "null", "Replace uses with null"),
+    clEnumValN(StubbingMethods::EmptyBody, "empty-body", "Replace the original body with an empty one")),
+  cl::init(StubbingMethods::Delete));
+
 cl::opt<bool> DontReducePassList("disable-pass-list-reduction",
                                  cl::desc("Skip pass list reduction steps"),
                                  cl::init(false));
@@ -259,52 +268,77 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
   outs() << "Checking for crash with only these functions: ";
   PrintFunctionList(Funcs);
   outs() << ": ";
-  if (!ReplaceFuncsWithNull) {
-    // Loop over and delete any functions which we aren't supposed to be playing
-    // with...
-    for (Function &I : *M)
-      if (!I.isDeclaration() && !Functions.count(&I))
-        DeleteFunctionBody(&I);
-  } else {
-    std::vector<GlobalValue *> ToRemove;
-    // First, remove aliases to functions we're about to purge.
-    for (GlobalAlias &Alias : M->aliases()) {
-      GlobalObject *Root = Alias.getBaseObject();
-      Function *F = dyn_cast_or_null<Function>(Root);
-      if (F) {
-        if (Functions.count(F))
-          // We're keeping this function.
+  switch(StubbingMethod) {
+    case StubbingMethods::Delete: {
+      // Loop over and delete any functions which we aren't supposed to be playing
+      // with...
+      for (Function &I : *M)
+        if (!I.isDeclaration() && !Functions.count(&I))
+          DeleteFunctionBody(&I);
+
+      break;
+    }
+    case StubbingMethods::Null: {
+      std::vector<GlobalValue *> ToRemove;
+      // First, remove aliases to functions we're about to purge.
+      for (GlobalAlias &Alias : M->aliases()) {
+        GlobalObject *Root = Alias.getBaseObject();
+        Function *F = dyn_cast_or_null<Function>(Root);
+        if (F) {
+          if (Functions.count(F))
+            // We're keeping this function.
+            continue;
+        } else if (Root->isNullValue()) {
+          // This referenced a globalalias that we've already replaced,
+          // so we still need to replace this alias.
+        } else if (!F) {
+          // Not a function, therefore not something we mess with.
           continue;
-      } else if (Root->isNullValue()) {
-        // This referenced a globalalias that we've already replaced,
-        // so we still need to replace this alias.
-      } else if (!F) {
-        // Not a function, therefore not something we mess with.
-        continue;
-      }
+        }
 
-      PointerType *Ty = cast<PointerType>(Alias.getType());
-      Constant *Replacement = ConstantPointerNull::get(Ty);
-      Alias.replaceAllUsesWith(Replacement);
-      ToRemove.push_back(&Alias);
-    }
-
-    for (Function &I : *M) {
-      if (!I.isDeclaration() && !Functions.count(&I)) {
-        PointerType *Ty = cast<PointerType>(I.getType());
+        PointerType *Ty = cast<PointerType>(Alias.getType());
         Constant *Replacement = ConstantPointerNull::get(Ty);
-        I.replaceAllUsesWith(Replacement);
-        ToRemove.push_back(&I);
+        Alias.replaceAllUsesWith(Replacement);
+        ToRemove.push_back(&Alias);
       }
-    }
 
-    for (auto *F : ToRemove) {
-      F->eraseFromParent();
-    }
+      for (Function &I : *M) {
+        if (!I.isDeclaration() && !Functions.count(&I)) {
+          PointerType *Ty = cast<PointerType>(I.getType());
+          Constant *Replacement = ConstantPointerNull::get(Ty);
+          I.replaceAllUsesWith(Replacement);
+          ToRemove.push_back(&I);
+        }
+      }
 
-    // Finally, remove any null members from any global intrinsic.
-    RemoveFunctionReferences(M.get(), "llvm.used");
-    RemoveFunctionReferences(M.get(), "llvm.compiler.used");
+      for (auto *F : ToRemove) {
+        F->eraseFromParent();
+      }
+
+      // Finally, remove any null members from any global intrinsic.
+      RemoveFunctionReferences(M.get(), "llvm.used");
+      RemoveFunctionReferences(M.get(), "llvm.compiler.used");
+      break;
+    }
+    case StubbingMethods::EmptyBody: {
+      // Replace function bodies with a single BB returning undef.
+      for (Function &F : *M) {
+        if (!F.isDeclaration() && !Functions.count(&F)) {
+          Type* RetTy = F.getReturnType();
+          F.deleteBody();
+          BasicBlock* BB = BasicBlock::Create(F.getContext(), "", &F);
+          if(RetTy->isVoidTy()) {
+            ReturnInst::Create(F.getContext(), BB);
+          } else {
+            Constant *RetVal = UndefValue::get(RetTy);
+            ReturnInst::Create(F.getContext(), RetVal, BB);
+          }
+        }
+      }
+
+      // now go through and remove
+      break;
+    }
   }
   // Try running the hacked up program...
   if (TestFn(BD, M.get())) {
