@@ -272,10 +272,6 @@ Error CustomCompiler::compileProgram(const std::string &Bitcode,
     ProgramArgs.push_back(Arg);
   ProgramArgs.push_back(Bitcode);
 
-  // Add optional parameters to the running program from Argv
-  for (const auto &Arg : CompilerArgs)
-    ProgramArgs.push_back(Arg);
-
   if (RunProgramWithTimeout(CompilerCommand, ProgramArgs, "", "", "", Timeout,
                             MemoryLimit))
     return ProcessFailure(CompilerCommand, ProgramArgs, Timeout, MemoryLimit);
