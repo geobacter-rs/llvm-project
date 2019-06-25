@@ -220,7 +220,21 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-static const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
+// XXX duplicated in SIISelLowering
+static bool isFlatGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+         AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
+}
+static bool isNoopAddrSpaceCast(unsigned SrcAS,
+                                unsigned DestAS) {
+  return isFlatGlobalAddrSpace(SrcAS) &&
+         isFlatGlobalAddrSpace(DestAS);
+}
+
+static const MCExpr *lowerAddrSpaceCast(AsmPrinter* That,
+                                        const TargetMachine &TM,
                                         const Constant *CV,
                                         MCContext &OutContext) {
   // TargetMachine does not support llvm-style cast. Use C++-style cast.
@@ -235,17 +249,19 @@ static const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
     auto Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
+    auto DstAddr = CE->getType()->getPointerAddressSpace();
     if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
-      auto DstAddr = CE->getType()->getPointerAddressSpace();
       return MCConstantExpr::create(AT.getNullPointerValue(DstAddr),
         OutContext);
+    } else if (isNoopAddrSpaceCast(SrcAddr, DstAddr)){
+      return That->lowerConstant(Op);
     }
   }
   return nullptr;
 }
 
 const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+  if (const MCExpr *E = lowerAddrSpaceCast(this, TM, CV, OutContext))
     return E;
   return AsmPrinter::lowerConstant(CV);
 }
@@ -403,7 +419,7 @@ void R600AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV) {
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
+  if (const MCExpr *E = lowerAddrSpaceCast(this, TM, CV, OutContext))
     return E;
   return AsmPrinter::lowerConstant(CV);
 }
