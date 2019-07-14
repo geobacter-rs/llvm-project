@@ -393,8 +393,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MULHS, MVT::i16, Expand);
 
   setOperationAction(ISD::MUL, MVT::i64, Expand);
-  setOperationAction(ISD::MULHU, MVT::i64, Expand);
-  setOperationAction(ISD::MULHS, MVT::i64, Expand);
+  // Expand this ourselves so that ISD::XMULO can be expanded
+  // without any libcalls, which we don't support.
+  setOperationAction(ISD::MULHU, MVT::i64, Custom);
+  setOperationAction(ISD::MULHS, MVT::i64, Custom);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
   setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
@@ -1239,6 +1241,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::SIGN_EXTEND_INREG: return LowerSIGN_EXTEND_INREG(Op, DAG);
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR: return LowerEXTRACT_SUBVECTOR(Op, DAG);
+  case ISD::MULHU:
+  case ISD::MULHS:
+    return LowerMULHX(Op, DAG);
   case ISD::UDIVREM: return LowerUDIVREM(Op, DAG);
   case ISD::SDIVREM: return LowerSDIVREM(Op, DAG);
   case ISD::FREM: return LowerFREM(Op, DAG);
@@ -1976,6 +1981,46 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
   Results.push_back(DIV);
   Results.push_back(REM);
 }
+
+SDValue AMDGPUTargetLowering::LowerMULHX(SDValue Op,
+                                         SelectionDAG &DAG) const {
+  // Expand this manually so i64 XMULO can be expanded without a
+  // libcall (which we don't support).
+  // This is pretty much exactly how LegalizeDAG does it;
+  // LegalizeDAG just doesn't recurse.
+
+  SDLoc DL(Op);
+
+  unsigned ExpandOpcode =
+    Op->getOpcode() == ISD::MULHU ? ISD::UMUL_LOHI : ISD::SMUL_LOHI;
+  EVT VT = Op->getValueType(0);
+
+  // Also expand XMUL_LOHI ourselves, as LegalizeDAG will try to use
+  // MULHX, calling this function again.
+  // This maybe inserts more instructions than we strictly need, but
+  // it's simple.
+
+  auto LHS = Op->getOperand(0);
+  auto RHS = Op->getOperand(1);
+
+  SmallVector<SDValue, 4> Halves;
+  EVT HalfType = EVT(VT).getHalfSizedIntegerVT(*DAG.getContext());
+  assert(isTypeLegal(HalfType));
+  if (!expandMUL_LOHI(ExpandOpcode, VT, Op, LHS, RHS, Halves,
+                     HalfType, DAG,
+                     TargetLowering::MulExpansionKind::Always)) {
+    report_fatal_error("failed to expandMUL_LOHI");
+  }
+
+  SDValue Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Halves[2]);
+  SDValue Hi = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Halves[3]);
+  SDValue Shift = DAG.getConstant(
+    HalfType.getScalarSizeInBits(), DL,
+    getShiftAmountTy(HalfType, DAG.getDataLayout()));
+  Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, Shift);
+  return DAG.getNode(ISD::OR, DL, VT, Lo, Hi);
+}
+
 
 SDValue AMDGPUTargetLowering::LowerUDIVREM(SDValue Op,
                                            SelectionDAG &DAG) const {
