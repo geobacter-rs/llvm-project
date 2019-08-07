@@ -54,6 +54,7 @@ namespace llvm {
   class MCSectionMachO;
   class MCSectionWasm;
   class MCSectionXCOFF;
+  class MCSectionSPIRV;
   class MCStreamer;
   class MCSymbol;
   class MCSymbolELF;
@@ -98,6 +99,7 @@ namespace llvm {
     SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
     SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
     SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
+    SpecificBumpPtrAllocator<MCSectionSPIRV> SPIRVAllocator;
     SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
 
     /// Bindings of names to symbols.
@@ -575,6 +577,8 @@ namespace llvm {
                                     XCOFF::SymbolType CSectType, SectionKind K,
                                     bool MultiSymbolsAllowed = false,
                                     const char *BeginSymName = nullptr);
+
+    MCSectionSPIRV *getSPIRVSection();
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

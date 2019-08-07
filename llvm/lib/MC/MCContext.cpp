@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -90,6 +91,7 @@ void MCContext::reset() {
   ELFAllocator.DestroyAll();
   MachOAllocator.DestroyAll();
   XCOFFAllocator.DestroyAll();
+  SPIRVAllocator.DestroyAll();
   MCInstAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
@@ -192,6 +194,7 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
       return new (Name, *this) MCSymbolWasm(Name, IsTemporary);
     case MCObjectFileInfo::IsXCOFF:
       return createXCOFFSymbolImpl(Name, IsTemporary);
+    default: break;
     }
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
@@ -697,6 +700,21 @@ MCContext::getXCOFFSection(StringRef Section, XCOFF::StorageMappingClass SMC,
       MCSectionXCOFF(QualName->getUnqualifiedName(), SMC, Type, Kind, QualName,
                      Begin, CachedName, MultiSymbolsAllowed);
   Entry.second = Result;
+
+  auto *F = new MCDataFragment();
+  Result->getFragmentList().insert(Result->begin(), F);
+  F->setParent(Result);
+
+  if (Begin)
+    Begin->setFragment(F);
+
+  return Result;
+}
+
+MCSectionSPIRV *MCContext::getSPIRVSection() {
+  MCSymbol *Begin = nullptr;
+  MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate())
+      MCSectionSPIRV(SectionKind::getText(), Begin);
 
   auto *F = new MCDataFragment();
   Result->getFragmentList().insert(Result->begin(), F);
