@@ -716,6 +716,10 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCObjectFileInfo::IsXCOFF:
     // TODO: Need to implement createXCOFFAsmParser for XCOFF format.
     break;
+  case MCObjectFileInfo::IsSPIRV:
+    report_fatal_error(
+        "Need to implement createSPIRVAsmParser for SPIRV format.");
+    break;
   }
 
   PlatformParser->Initialize(*this);
