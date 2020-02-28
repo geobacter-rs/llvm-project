@@ -95,6 +95,28 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
         return false;
       if (!onlyUsedByLifetimeMarkers(GEPI))
         return false;
+    } else if (const auto *Cmp = dyn_cast<ICmpInst>(U)) {
+      // check if this is a @llvm.assume(icmp ne null), which can be deleted
+      // while promoting.
+      if (Cmp->getPredicate() != CmpInst::ICMP_NE) {
+        return false;
+      }
+      unsigned OtherOperandIdx = 1;
+      if (Cmp->getOperand(0) != AI) {
+        OtherOperandIdx = 0;
+      }
+      auto *Lhs = Cmp->getOperand(OtherOperandIdx)->stripPointerCasts();
+      if (!isa<ConstantPointerNull>(Lhs)) {
+        return false;
+      }
+      for (const User *ICmpU : Cmp->users()) {
+        if (const auto *II = dyn_cast<IntrinsicInst>(ICmpU)) {
+          if (II->getIntrinsicID() == Intrinsic::assume) {
+            continue;
+          }
+        }
+        return false;
+      }
     } else {
       return false;
     }
@@ -312,7 +334,7 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   AC->registerAssumption(CI);
 }
 
-static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
+static void removeLifetimeAndAssumeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
 
@@ -323,7 +345,7 @@ static void removeLifetimeIntrinsicUsers(AllocaInst *AI) {
       continue;
 
     if (!I->getType()->isVoidTy()) {
-      // The only users of this bitcast/GEP instruction are lifetime intrinsics.
+      // Remove lifetime/assume intrinsics.
       // Follow the use/def chain to erase them now instead of leaving it for
       // dead code elimination later.
       for (auto UUI = I->user_begin(), UUE = I->user_end(); UUI != UUE;) {
@@ -544,7 +566,7 @@ void PromoteMem2Reg::run() {
     assert(AI->getParent()->getParent() == &F &&
            "All allocas should be in the same function, which is same as DF!");
 
-    removeLifetimeIntrinsicUsers(AI);
+    removeLifetimeAndAssumeIntrinsicUsers(AI);
 
     if (AI->use_empty()) {
       // If there are no uses of the alloca, just delete it now.
