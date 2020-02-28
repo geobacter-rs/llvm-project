@@ -90,6 +90,28 @@ bool llvm::isAllocaPromotable(const AllocaInst *AI) {
     } else if (const AddrSpaceCastInst *ASCI = dyn_cast<AddrSpaceCastInst>(U)) {
       if (!onlyUsedByLifetimeMarkers(ASCI))
         return false;
+    } else if (const auto *Cmp = dyn_cast<ICmpInst>(U)) {
+      // check if this is a @llvm.assume(icmp ne null), which can be deleted
+      // while promoting.
+      if (Cmp->getPredicate() != CmpInst::ICMP_NE) {
+        return false;
+      }
+      unsigned OtherOperandIdx = 1;
+      if (Cmp->getOperand(0) != AI) {
+        OtherOperandIdx = 0;
+      }
+      auto *Lhs = Cmp->getOperand(OtherOperandIdx)->stripPointerCasts();
+      if (!isa<ConstantPointerNull>(Lhs)) {
+        return false;
+      }
+      for (const User *ICmpU : Cmp->users()) {
+        if (const auto *II = dyn_cast<IntrinsicInst>(ICmpU)) {
+          if (II->getIntrinsicID() == Intrinsic::assume) {
+            continue;
+          }
+        }
+        return false;
+      }
     } else {
       return false;
     }
