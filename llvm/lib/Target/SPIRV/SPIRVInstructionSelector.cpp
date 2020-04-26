@@ -55,7 +55,7 @@ public:
                            SPIRVTypeRegistry &TR);
 
   // Common selection code. Instruction-specific selection occurs in spvSelect()
-  bool select(MachineInstr &I) override;
+  bool select(MachineInstr &I, CodeGenCoverage &CoverageInfo) const override;
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -178,7 +178,8 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(
     : InstructionSelector(), TM(TM), ST(ST), TII(*ST.getInstrInfo()),
       TRI(*ST.getRegisterInfo()), RBI(RBI), TR(TR) {}
 
-bool SPIRVInstructionSelector::select(MachineInstr &I) {
+bool SPIRVInstructionSelector::select(MachineInstr &I,
+                                      CodeGenCoverage &CoverageInfo) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
@@ -560,34 +561,34 @@ static bool canUseNUW(unsigned opCode) {
   }
 }
 
-static void decorate(Register target, Decoration::Decoration dec,
+static void decorate(Register target, Decoration dec,
                      MachineIRBuilder &MIRBuilder) {
-  MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(target).addImm(dec);
+  MIRBuilder.buildInstr(SPIRV::OpDecorate).addUse(target).addImm((uint32_t)dec);
 }
-static void decorate(Register target, Decoration::Decoration dec, uint32_t imm,
+static void decorate(Register target, Decoration dec, uint32_t imm,
                      MachineIRBuilder &MIRBuilder) {
   MIRBuilder.buildInstr(SPIRV::OpDecorate)
       .addUse(target)
-      .addImm(dec)
+      .addImm((uint32_t)dec)
       .addImm(imm);
 }
 
 static uint32_t getFastMathFlags(const MachineInstr &I) {
-  uint32_t flags = FPFastMathMode::None;
+  uint32_t flags = (uint32_t)FPFastMathMode::None;
   if (I.getFlag(MachineInstr::MIFlag::FmNoNans)) {
-    flags |= FPFastMathMode::NotNaN;
+    flags |= (uint32_t)FPFastMathMode::NotNaN;
   }
   if (I.getFlag(MachineInstr::MIFlag::FmNoInfs)) {
-    flags |= FPFastMathMode::NotInf;
+    flags |= (uint32_t)FPFastMathMode::NotInf;
   }
   if (I.getFlag(MachineInstr::MIFlag::FmNsz)) {
-    flags |= FPFastMathMode::NSZ;
+    flags |= (uint32_t)FPFastMathMode::NSZ;
   }
   if (I.getFlag(MachineInstr::MIFlag::FmArcp)) {
-    flags |= FPFastMathMode::AllowRecip;
+    flags |= (uint32_t)FPFastMathMode::AllowRecip;
   }
   if (I.getFlag(MachineInstr::MIFlag::FmReassoc)) {
-    flags |= FPFastMathMode::Fast;
+    flags |= (uint32_t)FPFastMathMode::Fast;
   }
   return flags;
 }
@@ -626,7 +627,7 @@ bool SPIRVInstructionSelector::selectBinOp(Register resVReg,
 
   if (canUseFastMathFlags(newOpcode)) {
     auto fmFlags = getFastMathFlags(I);
-    if (fmFlags != FPFastMathMode::None) {
+    if (fmFlags != (uint32_t)FPFastMathMode::None) {
       decorate(resVReg, Decoration::FPFastMathMode, fmFlags, MIRBuilder);
     }
   }
@@ -647,7 +648,7 @@ bool SPIRVInstructionSelector::selectUnOp(Register resVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-static MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering ord) {
+static MemorySemantics getMemSemantics(AtomicOrdering ord) {
   switch (ord) {
   case AtomicOrdering::Acquire:
     return MemorySemantics::Acquire;
@@ -660,12 +661,11 @@ static MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering ord) {
   case AtomicOrdering::Unordered:
   case AtomicOrdering::Monotonic:
   case AtomicOrdering::NotAtomic:
-  default:
     return MemorySemantics::None;
   }
 }
 
-static Scope::Scope getScope(SyncScope::ID ord) {
+static Scope getScope(SyncScope::ID ord) {
   switch (ord) {
   case SyncScope::SingleThread:
     return Scope::Invocation;
@@ -685,12 +685,13 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register resVReg,
   assert(I.hasOneMemOperand());
   auto memOp = *I.memoperands_begin();
   auto scope = getScope(memOp->getSyncScopeID());
-  Register scopeReg = buildI32Constant(scope, MIRBuilder);
+  Register scopeReg = buildI32Constant((uint32_t)scope, MIRBuilder);
 
   auto ptr = I.getOperand(1).getReg();
-  auto scSem = getMemSemanticsForStorageClass(TR.getPointerStorageClass(ptr));
+  auto scSem =
+      (uint32_t)getMemSemanticsForStorageClass(TR.getPointerStorageClass(ptr));
 
-  auto memSem = getMemSemantics(memOp->getOrdering());
+  auto memSem = (uint32_t)getMemSemantics(memOp->getOrdering());
   Register memSemReg = buildI32Constant(memSem | scSem, MIRBuilder);
 
   return MIRBuilder.buildInstr(newOpcode)
@@ -706,10 +707,10 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register resVReg,
 bool SPIRVInstructionSelector::selectFence(const MachineInstr &I,
                                            MachineIRBuilder &MIRBuilder) const {
   auto memSem = getMemSemantics(AtomicOrdering(I.getOperand(0).getImm()));
-  Register memSemReg = buildI32Constant(memSem, MIRBuilder);
+  Register memSemReg = buildI32Constant((uint32_t)memSem, MIRBuilder);
 
   auto scope = getScope(SyncScope::ID(I.getOperand(1).getImm()));
-  Register scopeReg = buildI32Constant(scope, MIRBuilder);
+  Register scopeReg = buildI32Constant((uint32_t)scope, MIRBuilder);
 
   return MIRBuilder.buildInstr(SPIRV::OpMemoryBarrier)
       .addUse(scopeReg)
@@ -726,19 +727,21 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register resVReg,
   assert(I.hasOneMemOperand());
   auto memOp = *I.memoperands_begin();
   auto scope = getScope(memOp->getSyncScopeID());
-  Register scopeReg = buildI32Constant(scope, MIRBuilder);
+  Register scopeReg = buildI32Constant((uint32_t)scope, MIRBuilder);
 
   auto ptr = I.getOperand(2).getReg();
   auto cmp = I.getOperand(3).getReg();
   auto val = I.getOperand(4).getReg();
 
   auto spvValTy = TR.getSPIRVTypeForVReg(val);
-  auto scSem = getMemSemanticsForStorageClass(TR.getPointerStorageClass(ptr));
+  auto scSem =
+      (uint32_t)getMemSemanticsForStorageClass(TR.getPointerStorageClass(ptr));
 
-  auto memSemEq = getMemSemantics(memOp->getOrdering()) | scSem;
+  auto memSemEq = (uint32_t)getMemSemantics(memOp->getOrdering()) | scSem;
   Register memSemEqReg = buildI32Constant(memSemEq, MIRBuilder);
 
-  auto memSemNeq = getMemSemantics(memOp->getFailureOrdering()) | scSem;
+  auto memSemNeq =
+      (uint32_t)getMemSemantics(memOp->getFailureOrdering()) | scSem;
   Register memSemNeqReg = memSemEq == memSemNeq
                               ? memSemEqReg
                               : buildI32Constant(memSemNeq, MIRBuilder);
@@ -774,7 +777,7 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register resVReg,
                         .constrainAllUses(TII, TRI, RBI);
 }
 
-static bool isGenericCastablePtr(StorageClass::StorageClass sc) {
+static bool isGenericCastablePtr(StorageClass sc) {
   switch (sc) {
   case StorageClass::Workgroup:
   case StorageClass::CrossWorkgroup:
@@ -794,16 +797,15 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(
     Register resVReg, const SPIRVType *resType, const MachineInstr &I,
     MachineIRBuilder &MIRBuilder) const {
   using namespace SPIRV;
-  namespace SC = StorageClass;
   auto srcPtr = I.getOperand(1).getReg();
   auto srcPtrTy = TR.getSPIRVTypeForVReg(srcPtr);
   auto srcSC = TR.getPointerStorageClass(srcPtr);
   auto dstSC = TR.getPointerStorageClass(resVReg);
 
-  if (dstSC == SC::Generic && isGenericCastablePtr(srcSC)) {
+  if (dstSC == StorageClass::Generic && isGenericCastablePtr(srcSC)) {
     // We're casting from an eligable pointer to Generic
     return selectUnOp(resVReg, resType, I, MIRBuilder, OpPtrCastToGeneric);
-  } else if (srcSC == SC::Generic && isGenericCastablePtr(dstSC)) {
+  } else if (srcSC == StorageClass::Generic && isGenericCastablePtr(dstSC)) {
     // We're casting from Generic to an eligable pointer
     return selectUnOp(resVReg, resType, I, MIRBuilder, OpGenericCastToPtr);
   } else if (isGenericCastablePtr(srcSC) && isGenericCastablePtr(dstSC)) {
@@ -1240,7 +1242,7 @@ bool SPIRVInstructionSelector::selectFrameIndex(
   return MIRBuilder.buildInstr(SPIRV::OpVariable)
       .addDef(resVReg)
       .addUse(TR.getSPIRVTypeID(resType))
-      .addImm(StorageClass::Function)
+      .addImm((uint32_t)StorageClass::Function)
       .constrainAllUses(TII, TRI, RBI);
 }
 

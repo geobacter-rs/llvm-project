@@ -155,7 +155,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
           for (unsigned int i = numFixedOps; i < numOps; ++i) {
             O << ' ';
             printMemoryOperand(MI, i, O);
-            if (MI->getOperand(i).getImm() & MemoryOperand::Aligned) {
+            if (MI->getOperand(i).getImm() & (uint32_t)MemoryOperand::Aligned) {
               assert(i + 1 < numOps && "Missing alignment operand");
               O << ' ';
               printOperand(MI, i + 1, O);
@@ -221,7 +221,7 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
 
   if (numFixedOps != MI->getNumOperands()) {
     auto decOp = MI->getOperand(numFixedOps - 1);
-    auto dec = static_cast<Decoration::Decoration>(decOp.getImm());
+    auto dec = static_cast<Decoration>(decOp.getImm());
 
     O << ' ';
 
@@ -274,7 +274,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg()) {
-      O << "%" << (Register::virtReg2Index(Op.getReg()) + 1);
+      O << "%" << (Register(Op.getReg()).virtRegIndex() + 1);
     } else if (Op.isImm()) {
       O << formatImm((int32_t)Op.getImm());
     } else {
@@ -308,7 +308,7 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
 
     // Check for final Op of "OpDecorate %x %stringImm %linkageAttribute"
     if (MI->getOpcode() == SPIRV::OpDecorate &&
-        MI->getOperand(1).getImm() == Decoration::LinkageAttributes) {
+        MI->getOperand(1).getImm() == (uint32_t)Decoration::LinkageAttributes) {
       O << ' ';
       printLinkageType(MI, strStartIndex, O);
       break;

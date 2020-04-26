@@ -90,7 +90,7 @@ static bool hasType(const MCInst &MI, const MCInstrInfo &MII,
 static void emitOperand(const MCOperand &Op, EndianWriter &OSE) {
   if (Op.isReg()) {
     // Emit the id index starting at 1 (0 is an invalid index)
-    OSE.write<uint32_t>(Register::virtReg2Index(Op.getReg()) + 1);
+    OSE.write<uint32_t>(Register(Op.getReg()).virtRegIndex() + 1);
   } else if (Op.isImm()) {
     OSE.write<uint32_t>(Op.getImm());
   } else {

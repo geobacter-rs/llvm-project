@@ -86,15 +86,15 @@ bool SPIRVIRTranslator::buildGlobalValue(Register Reg, const GlobalValue *GV,
       storage != StorageClass::Function) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
-                   .addImm(Decoration::LinkageAttributes);
+                   .addImm((uint32_t)Decoration::LinkageAttributes);
     addStringImm(globalIdent, MIB);
-    MIB.addImm(LinkageType::Export);
+    MIB.addImm((uint32_t)LinkageType::Export);
   }
 
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(Reg)
                  .addUse(TR->getSPIRVTypeID(resType))
-                 .addImm(storage);
+                 .addImm((uint32_t)storage);
   if (initVReg != 0) {
     MIB.addUse(initVReg);
     // TODO should this check be here?
@@ -312,20 +312,20 @@ static unsigned int getMetadataUInt(const MDNode *mdNode, unsigned int opIndex,
 
 static void addMemoryOperands(const Instruction *val, unsigned int alignment,
                               bool isVolatile, MachineInstrBuilder &MIB) {
-  uint32_t spvMemOp = MemoryOperand::None;
+  uint32_t spvMemOp = (uint32_t)MemoryOperand::None;
   if (isVolatile) {
-    spvMemOp |= MemoryOperand::Volatile;
+    spvMemOp |= (uint32_t)MemoryOperand::Volatile;
   }
   if (getMetadataUInt(val->getMetadata("nontemporal"), 0) == 1) {
-    spvMemOp |= MemoryOperand::Nontemporal;
+    spvMemOp |= (uint32_t)MemoryOperand::Nontemporal;
   }
   if (alignment != 0) {
-    spvMemOp |= MemoryOperand::Aligned;
+    spvMemOp |= (uint32_t)MemoryOperand::Aligned;
   }
 
-  if (spvMemOp != MemoryOperand::None) {
+  if (spvMemOp != (uint32_t)MemoryOperand::None) {
     MIB.addImm(spvMemOp);
-    if (spvMemOp & MemoryOperand::Aligned) {
+    if (spvMemOp & (uint32_t)MemoryOperand::Aligned) {
       MIB.addImm(alignment);
     }
   }
