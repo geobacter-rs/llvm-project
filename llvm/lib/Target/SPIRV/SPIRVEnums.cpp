@@ -22,7 +22,7 @@ GEN_ENUM_IMPL(ExecutionMode)
 GEN_ENUM_IMPL(StorageClass)
 
 // Dim must be implemented manually, as "1D" is not a valid C++ naming token
-std::string getDimName(Dim::Dim dim) {
+std::string getDimName(Dim dim) {
   switch (dim) {
   case Dim::DIM_1D:
     return "1D";
@@ -38,8 +38,6 @@ std::string getDimName(Dim::Dim dim) {
     return "Buffer";
   case Dim::DIM_SubpassData:
     return "SubpassData";
-  default:
-    return "UNKNOWN_Dim";
   }
 }
 
@@ -74,23 +72,21 @@ GEN_ENUM_IMPL(GroupOperation)
 GEN_ENUM_IMPL(KernelEnqueueFlags)
 GEN_MASK_ENUM_IMPL(KernelProfilingInfo)
 
-namespace MS = MemorySemantics;
-namespace SC = StorageClass;
-MS::MemorySemantics getMemSemanticsForStorageClass(SC::StorageClass sc) {
+MemorySemantics getMemSemanticsForStorageClass(StorageClass sc) {
   switch (sc) {
-  case SC::StorageBuffer:
-  case SC::Uniform:
-    return MS::UniformMemory;
-  case SC::Workgroup:
-    return MS::WorkgroupMemory;
-  case SC::CrossWorkgroup:
-    return MS::CrossWorkgroupMemory;
-  case SC::AtomicCounter:
-    return MS::AtomicCounterMemory;
-  case SC::Image:
-    return MS::ImageMemory;
+  case StorageClass::StorageBuffer:
+  case StorageClass::Uniform:
+    return MemorySemantics::UniformMemory;
+  case StorageClass::Workgroup:
+    return MemorySemantics::WorkgroupMemory;
+  case StorageClass::CrossWorkgroup:
+    return MemorySemantics::CrossWorkgroupMemory;
+  case StorageClass::AtomicCounter:
+    return MemorySemantics::AtomicCounterMemory;
+  case StorageClass::Image:
+    return MemorySemantics::ImageMemory;
   default:
-    return MS::None;
+    return MemorySemantics::None;
   }
 }
 

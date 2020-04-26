@@ -28,8 +28,6 @@
 #include "SPIRVEnums.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
-namespace AQ = AccessQualifier;
-
 namespace llvm {
 using SPIRVType = const MachineInstr;
 
@@ -39,7 +37,7 @@ private:
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Reconstituted from ASSIGN_TYPE machineInstrs in subsequent passes.
-  DenseMap<Register, SPIRVType *> VRegToTypeMap;
+  DenseMap<unsigned, SPIRVType *> VRegToTypeMap;
 
   // Maps LLVM IR types to SPIR-V types (only used in IRTranslator pass)
   DenseMap<const Type *, SPIRVType *> TypeToSPIRVTypeMap;
@@ -51,8 +49,9 @@ private:
   const unsigned int pointerSize;
 
   // Add a new OpTypeXXX instruction without checking for duplicates
-  SPIRVType *createSPIRVType(const Type *type, MachineIRBuilder &MIRBuilder,
-                             AQ::AccessQualifier accessQual = AQ::ReadWrite);
+  SPIRVType *
+  createSPIRVType(const Type *type, MachineIRBuilder &MIRBuilder,
+                  AccessQualifier accessQual = AccessQualifier::ReadWrite);
 
 public:
   SPIRVTypeRegistry(unsigned int pointerSize);
@@ -67,9 +66,10 @@ public:
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
   // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
-  SPIRVType *assignTypeToVReg(const Type *type, Register VReg,
-                              MachineIRBuilder &MIRBuilder,
-                              AQ::AccessQualifier accessQual = AQ::ReadWrite);
+  SPIRVType *
+  assignTypeToVReg(const Type *type, Register VReg,
+                   MachineIRBuilder &MIRBuilder,
+                   AccessQualifier accessQual = AccessQualifier::ReadWrite);
 
   // In cases where the SPIR-V type is already known, this function can be
   // used to map it to the given VReg via an ASSIGN_TYPE instruction.
@@ -80,7 +80,7 @@ public:
   // corresponding to the given LLVM IR type.
   SPIRVType *
   getOrCreateSPIRVType(const Type *type, MachineIRBuilder &MIRBuilder,
-                       AQ::AccessQualifier accessQual = AQ ::ReadWrite);
+                       AccessQualifier accessQual = AccessQualifier::ReadWrite);
 
   // Return the SPIR-V type instruction corresponding to the given VReg, or
   // nullptr if no such type instruction exists.
@@ -113,7 +113,7 @@ public:
   bool isScalarOrVectorSigned(const SPIRVType *type);
 
   // Gets the storage class of the pointer type assigned to this vreg
-  StorageClass::StorageClass getPointerStorageClass(Register vreg);
+  StorageClass getPointerStorageClass(Register vreg);
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return pointerSize; }
@@ -150,8 +150,7 @@ public:
   SPIRVType *getOpTypeStruct(const SmallVectorImpl<SPIRVType *> &elems,
                              MachineIRBuilder &MIRBuilder, StringRef name = "");
 
-  SPIRVType *getOpTypePointer(StorageClass::StorageClass sc,
-                              SPIRVType *elemType,
+  SPIRVType *getOpTypePointer(StorageClass sc, SPIRVType *elemType,
                               MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeFunction(SPIRVType *retType,
@@ -167,20 +166,18 @@ public:
 
   // Get or create an OpTypeImage with the given parameters.
   SPIRVType *getOpTypeImage(MachineIRBuilder &MIRBuilder,
-                            SPIRVType *sampledType, Dim::Dim dim,
-                            uint32_t depth, uint32_t arrayed,
-                            uint32_t multisampled, uint32_t sampled,
-                            ImageFormat::ImageFormat imageFormat,
-                            AQ::AccessQualifier accessQualifier);
+                            SPIRVType *sampledType, Dim dim, uint32_t depth,
+                            uint32_t arrayed, uint32_t multisampled,
+                            uint32_t sampled, ImageFormat imageFormat,
+                            AccessQualifier accessQualifier);
 
   std::vector<SPIRVType *> *getExistingTypesForOpcode(unsigned opcode);
 
   // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
-  unsigned int StorageClassToAddressSpace(StorageClass::StorageClass sc);
+  unsigned int StorageClassToAddressSpace(StorageClass sc);
 
   // Convert an LLVM IR address space to a SPIR-V storage class.
-  StorageClass::StorageClass
-  addressSpaceToStorageClass(unsigned int addressSpace);
+  StorageClass addressSpaceToStorageClass(unsigned int addressSpace);
 
   // Utility method to constrain an instruction's operands to the correct
   // register classes, and return true if this worked.

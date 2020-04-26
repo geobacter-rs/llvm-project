@@ -24,16 +24,16 @@
 #include <set>
 #include <vector>
 
-using CapabilityList = std::vector<Capability::Capability>;
+using CapabilityList = std::vector<Capability>;
 using ExtensionList = std::vector<Extension::Extension>;
 
 class SPIRVRequirementHandler {
 private:
   CapabilityList minimalCaps;
-  std::set<Capability::Capability> allCaps;
+  std::set<Capability> allCaps;
   std::set<Extension::Extension> allExtensions;
-  uint32_t minVersion; // 0 if no min version is defined
-  uint32_t maxVersion; // 0 if no max version is defined
+  uint32_t minVersion = 0; // 0 if no min version is defined
+  uint32_t maxVersion = 0; // 0 if no max version is defined
 
   void pruneCapabilities(const CapabilityList &toPrune);
 
@@ -49,7 +49,7 @@ public:
   // declared capabilities, and minimalCaps has the minimal set of required
   // capabilities (so all implicitly declared ones are removed).
   void addCapabilities(const CapabilityList &toAdd);
-  void addCapability(Capability::Capability toAdd);
+  void addCapability(Capability toAdd);
   void addExtensions(const ExtensionList &toAdd);
   void addExtension(Extension::Extension toAdd);
 

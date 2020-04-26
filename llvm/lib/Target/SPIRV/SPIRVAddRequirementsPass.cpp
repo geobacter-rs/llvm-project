@@ -75,7 +75,7 @@ bool SPIRVAddRequirements::runOnMachineFunction(MachineFunction &MF) {
   MIRBuilder.setInstr(*MBB->begin());
 
   for (const auto &cap : reqHandler.getMinimalCapabilities()) {
-    MIRBuilder.buildInstr(SPIRV::OpCapability).addImm(cap);
+    MIRBuilder.buildInstr(SPIRV::OpCapability).addImm((uint32_t)cap);
   }
   for (const auto &ext : reqHandler.getExtensions()) {
     MIRBuilder.buildInstr(SPIRV::OpExtension).addImm(ext);
@@ -105,13 +105,11 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned int decIndex,
                               SPIRVRequirementHandler &reqs,
                               const SPIRVSubtarget &ST) {
   auto decOp = MI.getOperand(decIndex).getImm();
-  auto dec = static_cast<Decoration::Decoration>(decOp);
-  reqs.addRequirements(getDecorationRequirements(dec, ST));
+  reqs.addRequirements(getDecorationRequirements(decOp, ST));
 
-  if (dec == Decoration::BuiltIn) {
+  if (decOp == (uint32_t)Decoration::BuiltIn) {
     auto builtInOp = MI.getOperand(decIndex + 1).getImm();
-    auto builtIn = static_cast<BuiltIn::BuiltIn>(builtInOp);
-    reqs.addRequirements(getBuiltInRequirements(builtIn, ST));
+    reqs.addRequirements(getBuiltInRequirements(builtInOp, ST));
   }
 }
 
@@ -121,53 +119,57 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
                                const SPIRVSubtarget &ST) {
   assert(MI.getNumOperands() >= 8 && "Insufficient operands for OpTypeImage");
 
-  using namespace Capability;
-  using namespace Dim;
-
   // The operand indices used here are based on the OpTypeImage layout, which
   // the MachineInstr follows as well.
   auto imgFormatOp = MI.getOperand(7).getImm();
-  auto imgFormat = static_cast<ImageFormat::ImageFormat>(imgFormatOp);
-  reqs.addRequirements(getImageFormatRequirements(imgFormat, ST));
+  auto imgFormat = static_cast<ImageFormat>(imgFormatOp);
+  reqs.addRequirements(getImageFormatRequirements((uint32_t)imgFormat, ST));
 
   bool isArrayed = MI.getOperand(4).getImm() == 1;
   bool isMultisampled = MI.getOperand(5).getImm() == 1;
   bool noSampler = MI.getOperand(6).getImm() == 2;
 
   // Add dimension requirements
-  auto dim = MI.getOperand(2).getImm();
+  auto dim = static_cast<Dim>(MI.getOperand(2).getImm());
   switch (dim) {
-  case DIM_1D:
-    reqs.addRequirements(noSampler ? Image1D : Sampled1D);
+  case Dim::DIM_1D:
+    reqs.addRequirements(noSampler ? Capability::Image1D
+                                   : Capability::Sampled1D);
     break;
-  case DIM_2D:
+  case Dim::DIM_2D:
     if (isMultisampled && noSampler) {
-      reqs.addRequirements(ImageMSArray);
+      reqs.addRequirements(Capability::ImageMSArray);
     }
     break;
-  case DIM_Cube:
-    reqs.addRequirements(Shader);
+  case Dim::DIM_3D:
+    break;
+  case Dim::DIM_Cube:
+    reqs.addRequirements(Capability::Shader);
     if (isArrayed) {
-      reqs.addRequirements(noSampler ? ImageCubeArray : SampledCubeArray);
+      reqs.addRequirements(noSampler ? Capability::ImageCubeArray
+                                     : Capability::SampledCubeArray);
     }
     break;
-  case DIM_Rect:
-    reqs.addRequirements(noSampler ? ImageRect : SampledRect);
+  case Dim::DIM_Rect:
+    reqs.addRequirements(noSampler ? Capability::ImageRect
+                                   : Capability::SampledRect);
     break;
-  case DIM_Buffer:
-    reqs.addRequirements(noSampler ? ImageBuffer : SampledBuffer);
+  case Dim::DIM_Buffer:
+    reqs.addRequirements(noSampler ? Capability::ImageBuffer
+                                   : Capability::SampledBuffer);
     break;
-  case DIM_SubpassData:
-    reqs.addRequirements(InputAttachment);
+  case Dim::DIM_SubpassData:
+    reqs.addRequirements(Capability::InputAttachment);
     break;
   }
 
   if (ST.isKernel()) {
     // Has optional access qualifier
-    if (MI.getNumOperands() > 8 && MI.getOperand(8).getImm() == AQ::ReadWrite) {
-      reqs.addRequirements(ImageReadWrite);
+    if (MI.getNumOperands() > 8 &&
+        MI.getOperand(8).getImm() == (uint32_t)AccessQualifier::ReadWrite) {
+      reqs.addRequirements(Capability::ImageReadWrite);
     } else {
-      reqs.addRequirements(ImageBasic);
+      reqs.addRequirements(Capability::ImageBasic);
     }
   }
 }
@@ -175,7 +177,6 @@ static void addOpTypeImageReqs(const MachineInstr &MI,
 static void addInstrRequirements(const MachineInstr &MI,
                                  SPIRVRequirementHandler &reqs,
                                  const SPIRVSubtarget &ST) {
-  using namespace Capability;
   switch (MI.getOpcode()) {
   case SPIRV::OpMemoryModel: {
     auto addr = MI.getOperand(0).getImm();
@@ -196,32 +197,32 @@ static void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypeMatrix:
-    reqs.addCapability(Matrix);
+    reqs.addCapability(Capability::Matrix);
     break;
   case SPIRV::OpTypeInt: {
     unsigned bitWidth = MI.getOperand(1).getImm();
     if (bitWidth == 64) {
-      reqs.addCapability(Int64);
+      reqs.addCapability(Capability::Int64);
     } else if (bitWidth == 16) {
-      reqs.addCapability(Int16);
+      reqs.addCapability(Capability::Int16);
     } else if (bitWidth == 8) {
-      reqs.addCapability(Int8);
+      reqs.addCapability(Capability::Int8);
     }
     break;
   }
   case SPIRV::OpTypeFloat: {
     unsigned bitWidth = MI.getOperand(1).getImm();
     if (bitWidth == 64) {
-      reqs.addCapability(Float64);
+      reqs.addCapability(Capability::Float64);
     } else if (bitWidth == 16) {
-      reqs.addCapability(Float16);
+      reqs.addCapability(Capability::Float16);
     }
     break;
   }
   case SPIRV::OpTypeVector: {
     unsigned numComponents = MI.getOperand(2).getImm();
     if (numComponents == 8 || numComponents == 16) {
-      reqs.addCapability(Vector16);
+      reqs.addCapability(Capability::Vector16);
     }
     break;
   }
@@ -231,19 +232,19 @@ static void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpTypeRuntimeArray:
-    reqs.addCapability(Shader);
+    reqs.addCapability(Capability::Shader);
     break;
   case SPIRV::OpTypeOpaque:
   case SPIRV::OpTypeEvent:
-    reqs.addCapability(Kernel);
+    reqs.addCapability(Capability::Kernel);
     break;
   case SPIRV::OpTypePipe:
   case SPIRV::OpTypeReserveId:
-    reqs.addCapability(Pipes);
+    reqs.addCapability(Capability::Pipes);
     break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
-    reqs.addCapability(DeviceEnqueue);
+    reqs.addCapability(Capability::DeviceEnqueue);
     break;
   case SPIRV::OpDecorate:
   case SPIRV::OpDecorateId:
@@ -255,22 +256,22 @@ static void addInstrRequirements(const MachineInstr &MI,
     addOpDecorateReqs(MI, 2, reqs, ST);
     break;
   case SPIRV::OpInBoundsPtrAccessChain:
-    reqs.addCapability(Addresses);
+    reqs.addCapability(Capability::Addresses);
     break;
   case SPIRV::OpConstantSampler:
-    reqs.addCapability(LiteralSampler);
+    reqs.addCapability(Capability::LiteralSampler);
     break;
   case SPIRV::OpTypeImage:
     addOpTypeImageReqs(MI, reqs, ST);
     break;
   case SPIRV::OpTypeSampler:
-    reqs.addCapability(ImageBasic);
+    reqs.addCapability(Capability::ImageBasic);
     break;
   case SPIRV::OpTypeForwardPointer:
     if (ST.isKernel()) {
-      reqs.addCapability(Addresses);
+      reqs.addCapability(Capability::Addresses);
     } else {
-      reqs.addCapability(PhysicalStorageBufferAddressesEXT);
+      reqs.addCapability(Capability::PhysicalStorageBufferAddressesEXT);
     }
     break;
   case SPIRV::OpSelect:
