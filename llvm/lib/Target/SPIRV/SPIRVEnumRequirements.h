@@ -24,41 +24,38 @@ class SPIRVSubtarget;
 class SPIRVRequirements {
 public:
   const bool isSatisfiable;
-  const llvm::Optional<Capability::Capability> cap;
+  const llvm::Optional<Capability> cap;
   const std::vector<Extension::Extension> exts;
   const uint32_t minVer; // 0 if no min version is required
   const uint32_t maxVer; // 0 if no max version is required
 
   SPIRVRequirements(bool isSatisfiable = false,
-                    llvm::Optional<Capability::Capability> cap = {},
+                    llvm::Optional<Capability> cap = {},
                     std::vector<Extension::Extension> exts = {},
                     uint32_t minVer = 0, uint32_t maxVer = 0)
       : isSatisfiable(isSatisfiable), cap(cap), exts(exts), minVer(minVer),
         maxVer(maxVer) {}
-  SPIRVRequirements(Capability::Capability cap)
-      : SPIRVRequirements(true, {cap}) {}
+  SPIRVRequirements(Capability cap) : SPIRVRequirements(true, {cap}) {}
 };
 
 #define DEF_CAPABILITY_FUNC_HEADER(EnumName)                                   \
-  const std::vector<Capability::Capability> get##EnumName##Capabilities(       \
-      EnumName::EnumName e);
+  const std::vector<Capability> get##EnumName##Capabilities(EnumName e);
 
 #define DEF_EXTENSION_FUNC_HEADER(EnumName)                                    \
-  const std::vector<Extension::Extension> get##EnumName##Extensions(           \
-      EnumName::EnumName e);
+  const std::vector<Extension::Extension> get##EnumName##Extensions(EnumName e);
 
 #define DEF_MIN_VERSION_FUNC_HEADER(EnumName)                                  \
-  uint32_t get##EnumName##MinVersion(EnumName::EnumName e);
+  uint32_t get##EnumName##MinVersion(EnumName e);
 
 #define DEF_MAX_VERSION_FUNC_HEADER(EnumName)                                  \
-  uint32_t get##EnumName##MaxVersion(EnumName::EnumName e);
+  uint32_t get##EnumName##MaxVersion(EnumName e);
 
 #define DEF_REQUIREMENTS_FUNC_HEADER(EnumName)                                 \
   SPIRVRequirements get##EnumName##Requirements(                               \
       uint32_t i, const llvm::SPIRVSubtarget &ST);
 
 #define DEF_CAN_USE_FUNC_HEADER(EnumName)                                      \
-  bool canUse##EnumName(EnumName::EnumName e, const llvm::SPIRVSubtarget &ST);
+  bool canUse##EnumName(EnumName e, const llvm::SPIRVSubtarget &ST);
 
 #define GEN_ENUM_REQS_HEADER(EnumName)                                         \
   DEF_CAPABILITY_FUNC_HEADER(EnumName)                                         \

@@ -37,8 +37,9 @@ public:
                             ArrayRef<ArrayRef<Register>> VRegs) const override;
 
   // Build OpCall, or replace with a builtin function
-  bool lowerCall(MachineIRBuilder &MIRBuilder,
-                 CallLoweringInfo &Info) const override;
+  bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
+                 const MachineOperand &Callee, const ArgInfo &OrigRet,
+                 ArrayRef<ArgInfo> OrigArgs) const override;
 };
 } // end namespace llvm
 

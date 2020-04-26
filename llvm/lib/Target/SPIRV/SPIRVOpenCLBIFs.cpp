@@ -62,7 +62,7 @@ enum CLMemFenceFlags {
   CLK_IMAGE_MEM_FENCE = 0x4
 };
 
-static SamplerAddressingMode::SamplerAddressingMode
+static SamplerAddressingMode
 getSamplerAddressingModeFromBitmask(unsigned int bitmask) {
   if (bitmask & CLK_ADDRESS_CLAMP) {
     return SamplerAddressingMode::Clamp;
@@ -77,8 +77,7 @@ getSamplerAddressingModeFromBitmask(unsigned int bitmask) {
   }
 }
 
-static SamplerFilterMode::SamplerFilterMode
-getSamplerFilterModeFromBitmask(unsigned int bitmask) {
+static SamplerFilterMode getSamplerFilterModeFromBitmask(unsigned int bitmask) {
   if (bitmask & CLK_FILTER_LINEAR) {
     return SamplerFilterMode::Linear;
   } else if (bitmask & CLK_FILTER_NEAREST) {
@@ -88,8 +87,7 @@ getSamplerFilterModeFromBitmask(unsigned int bitmask) {
   }
 }
 
-static MemorySemantics::MemorySemantics
-getSPIRVMemSemantics(CLMemOrder clMemOrder) {
+static MemorySemantics getSPIRVMemSemantics(CLMemOrder clMemOrder) {
   switch (clMemOrder) {
   case memory_order_relaxed:
     return MemorySemantics::None;
@@ -105,8 +103,7 @@ getSPIRVMemSemantics(CLMemOrder clMemOrder) {
   llvm_unreachable("Unknown CL memory scope");
 }
 
-
-static Scope::Scope getSPIRVScope(CLMemScope clScope) {
+static Scope getSPIRVScope(CLMemScope clScope) {
   switch (clScope) {
   case memory_scope_work_item:
     return Scope::Invocation;
@@ -127,12 +124,13 @@ static unsigned int getSamplerParamFromBitmask(unsigned int bitmask) {
 static bool buildSamplerLiteral(uint64_t samplerBitmask, Register res,
                                 SPIRVType *resTy, MachineIRBuilder &MIRBuilder,
                                 SPIRVTypeRegistry *TR) {
-  auto MIB = MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
-                 .addDef(res)
-                 .addUse(TR->getSPIRVTypeID(resTy))
-                 .addImm(getSamplerAddressingModeFromBitmask(samplerBitmask))
-                 .addImm(getSamplerParamFromBitmask(samplerBitmask))
-                 .addImm(getSamplerFilterModeFromBitmask(samplerBitmask));
+  auto MIB =
+      MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
+          .addDef(res)
+          .addUse(TR->getSPIRVTypeID(resTy))
+          .addImm((uint32_t)getSamplerAddressingModeFromBitmask(samplerBitmask))
+          .addImm(getSamplerParamFromBitmask(samplerBitmask))
+          .addImm((uint32_t)getSamplerFilterModeFromBitmask(samplerBitmask));
   return TR->constrainRegOperands(MIB);
 }
 
@@ -145,33 +143,32 @@ static Register buildSamplerLiteral(uint64_t samplerBitmask,
   return sampler;
 }
 
-static bool decorate(Register target, Decoration::Decoration decoration,
+static bool decorate(Register target, Decoration decoration,
                      MachineIRBuilder &MIRBuilder, SPIRVTypeRegistry *TR) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(target)
-                 .addImm(decoration);
+                 .addImm((uint32_t)decoration);
   return TR->constrainRegOperands(MIB);
 }
 
-static bool decorate(Register target, Decoration::Decoration decoration,
-                     uint32_t decArg, MachineIRBuilder &MIRBuilder,
-                     SPIRVTypeRegistry *TR) {
+static bool decorate(Register target, Decoration decoration, uint32_t decArg,
+                     MachineIRBuilder &MIRBuilder, SPIRVTypeRegistry *TR) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(target)
-                 .addImm(decoration)
+                 .addImm((uint32_t)decoration)
                  .addImm(decArg);
   return TR->constrainRegOperands(MIB);
 }
 
 static bool decorateLinkage(Register target, const StringRef name,
-                            LinkageType::LinkageType linkageType,
+                            LinkageType linkageType,
                             MachineIRBuilder &MIRBuilder,
                             SPIRVTypeRegistry *TR) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(target)
-                 .addImm(Decoration::LinkageAttributes);
+                 .addImm((uint32_t)Decoration::LinkageAttributes);
   addStringImm(name, MIB);
-  MIB.addImm(LinkageType::Import);
+  MIB.addImm((uint32_t)LinkageType::Import);
   bool success = TR->constrainRegOperands(MIB);
 
   auto nameMIB = MIRBuilder.buildInstr(SPIRV::OpName).addUse(target);
@@ -184,17 +181,17 @@ static bool decorateConstant(Register target, MachineIRBuilder &MIRBuilder,
   return decorate(target, Decoration::Constant, MIRBuilder, TR);
 }
 
-static bool decorateBuiltIn(Register target, BuiltIn::BuiltIn builtInID,
+static bool decorateBuiltIn(Register target, BuiltIn builtInID,
                             MachineIRBuilder &MIRBuilder,
                             SPIRVTypeRegistry *TR) {
-  bool succ = decorate(target, Decoration::BuiltIn, builtInID, MIRBuilder, TR);
+  bool succ = decorate(target, Decoration::BuiltIn, (uint32_t)builtInID,
+                       MIRBuilder, TR);
   succ = succ && decorateLinkage(target, getLinkStrForBuiltIn(builtInID),
                                  LinkageType::Import, MIRBuilder, TR);
   return succ;
 }
 
-static Register buildOpVariable(SPIRVType *baseType,
-                                StorageClass::StorageClass storage,
+static Register buildOpVariable(SPIRVType *baseType, StorageClass storage,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVTypeRegistry *TR) {
 
@@ -204,7 +201,7 @@ static Register buildOpVariable(SPIRVType *baseType,
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(resVReg)
                  .addUse(TR->getSPIRVTypeID(ptrTy))
-                 .addImm(storage);
+                 .addImm((uint32_t)storage);
   TR->constrainRegOperands(MIB);
   return resVReg;
 }
@@ -316,7 +313,7 @@ static Register buildConstantFZero(MachineIRBuilder &MIRBuilder,
 static bool genWorkgroupQuery(MachineIRBuilder &MIRBuilder, Register resVReg,
                               SPIRVType *retType,
                               const SmallVectorImpl<Register> &OrigArgs,
-                              SPIRVTypeRegistry *TR, BuiltIn::BuiltIn builtIn,
+                              SPIRVTypeRegistry *TR, BuiltIn builtIn,
                               uint64_t defaultVal) {
   Register idxVReg = OrigArgs[0];
 
@@ -430,7 +427,7 @@ static bool genSampledReadImage(MachineIRBuilder &MIRBuilder, Register resVReg,
                  .addUse(TR->getSPIRVTypeID(retType))
                  .addUse(sampledImage)
                  .addUse(coord)
-                 .addImm(ImageOperand::Lod)
+                 .addImm((uint32_t)ImageOperand::Lod)
                  .addUse(lod);
   return TR->constrainRegOperands(MIB);
 }
@@ -459,17 +456,16 @@ static bool genWriteImage(MachineIRBuilder &MIRBuilder,
   return TR->constrainRegOperands(MIB);
 }
 
-static unsigned getNumComponentsForDim(Dim::Dim dim) {
-  using namespace Dim;
+static unsigned getNumComponentsForDim(Dim dim) {
   switch (dim) {
-  case DIM_1D:
-  case DIM_Buffer:
+  case Dim::DIM_1D:
+  case Dim::DIM_Buffer:
     return 1;
-  case DIM_2D:
-  case DIM_Cube:
-  case DIM_Rect:
+  case Dim::DIM_2D:
+  case Dim::DIM_Cube:
+  case Dim::DIM_Rect:
     return 2;
-  case DIM_3D:
+  case Dim::DIM_3D:
     return 3;
   default:
     llvm_unreachable("Cannot get num components for given Dim");
@@ -478,7 +474,7 @@ static unsigned getNumComponentsForDim(Dim::Dim dim) {
 
 static unsigned int getNumSizeComponents(SPIRVType *imgType) {
   assert(imgType->getOpcode() == SPIRV::OpTypeImage);
-  auto dim = static_cast<Dim::Dim>(imgType->getOperand(2).getImm());
+  auto dim = static_cast<Dim>(imgType->getOperand(2).getImm());
   unsigned numComps = getNumComponentsForDim(dim);
   bool arrayed = imgType->getOperand(4).getImm() == 1;
   return arrayed ? numComps + 1 : numComps;
@@ -597,20 +593,22 @@ static bool genAtomicCmpXchg(MachineIRBuilder &MIRBuilder, Register resVReg,
   assert(TR->isScalarOfType(desired, OpTypeInt));
 
   SPIRVType *spvObjectPtrTy = TR->getSPIRVTypeForVReg(objectPtr);
-  auto storageClass = static_cast<StorageClass::StorageClass>(
-      spvObjectPtrTy->getOperand(1).getImm());
-  auto memSemStorage = getMemSemanticsForStorageClass(storageClass);
+  auto storageClass =
+      static_cast<StorageClass>(spvObjectPtrTy->getOperand(1).getImm());
+  auto memSemStorage = (uint32_t)getMemSemanticsForStorageClass(storageClass);
 
   Register memSemEqualReg;
   Register memSemUnequalReg;
-  auto memSemEqual = MemorySemantics::SequentiallyConsistent | memSemStorage;
-  auto memSemUnequal = MemorySemantics::SequentiallyConsistent | memSemStorage;
+  auto memSemEqual =
+      (uint32_t)MemorySemantics::SequentiallyConsistent | memSemStorage;
+  auto memSemUnequal =
+      (uint32_t)MemorySemantics::SequentiallyConsistent | memSemStorage;
   if (OrigArgs.size() >= 4) {
     assert(OrigArgs.size() >= 5 && "Need 5+ args for explicit atomic cmpxchg");
     auto memOrdEq = static_cast<CLMemOrder>(getIConstVal(OrigArgs[3], MRI));
     auto memOrdNeq = static_cast<CLMemOrder>(getIConstVal(OrigArgs[4], MRI));
-    memSemEqual = getSPIRVMemSemantics(memOrdEq) | memSemStorage;
-    memSemUnequal = getSPIRVMemSemantics(memOrdNeq) | memSemStorage;
+    memSemEqual = (uint32_t)getSPIRVMemSemantics(memOrdEq) | memSemStorage;
+    memSemUnequal = (uint32_t)getSPIRVMemSemantics(memOrdNeq) | memSemStorage;
     if (memOrdEq == memSemEqual)
       memSemEqualReg = OrigArgs[3];
     if (memOrdNeq == memSemEqual)
@@ -632,7 +630,7 @@ static bool genAtomicCmpXchg(MachineIRBuilder &MIRBuilder, Register resVReg,
       scopeReg = OrigArgs[5];
   }
   if (!scopeReg.isValid())
-    scopeReg = buildIConstant(scope, I32Ty, MIRBuilder, TR);
+    scopeReg = buildIConstant((uint32_t)scope, I32Ty, MIRBuilder, TR);
 
   Register expected = buildLoad(spvDesiredTy, expectedPtr, MIRBuilder, TR);
   MRI->setType(expected, desiredLLT);
@@ -670,16 +668,17 @@ static bool genAtomicRMW(Register resVReg, const SPIRVType *resType,
       scopeReg = OrigArgs[5];
   }
   if (!scopeReg.isValid())
-    scopeReg = buildIConstant(scope, I32Ty, MIRBuilder, TR);
+    scopeReg = buildIConstant((uint32_t)scope, I32Ty, MIRBuilder, TR);
 
   auto ptr = OrigArgs[0];
-  auto scSem = getMemSemanticsForStorageClass(TR->getPointerStorageClass(ptr));
+  auto scSem =
+      (uint32_t)getMemSemanticsForStorageClass(TR->getPointerStorageClass(ptr));
 
   Register memSemReg;
-  auto memSem = MemorySemantics::SequentiallyConsistent | scSem;
+  auto memSem = (uint32_t)MemorySemantics::SequentiallyConsistent | scSem;
   if (OrigArgs.size() >= 3) {
     auto memOrd = static_cast<CLMemOrder>(getIConstVal(OrigArgs[2], MRI));
-    memSem = getSPIRVMemSemantics(memOrd) | scSem;
+    memSem = (uint32_t)getSPIRVMemSemantics(memOrd) | scSem;
     if (memOrd == memSem)
       memSemReg = OrigArgs[3];
   }
@@ -741,15 +740,15 @@ static bool genBarrier(MachineIRBuilder &MIRBuilder,
   const auto I32Ty = TR->getOpTypeInt(32, MIRBuilder);
 
   unsigned memFlags = getIConstVal(OrigArgs[0], MRI);
-  unsigned memSem = MemorySemantics::None;
+  unsigned memSem = (uint32_t)MemorySemantics::None;
   if (memFlags & CLK_LOCAL_MEM_FENCE) {
-    memSem |= MemorySemantics::WorkgroupMemory;
+    memSem |= (uint32_t)MemorySemantics::WorkgroupMemory;
   }
   if (memFlags & CLK_GLOBAL_MEM_FENCE) {
-    memSem |= MemorySemantics::CrossWorkgroupMemory;
+    memSem |= (uint32_t)MemorySemantics::CrossWorkgroupMemory;
   }
   if (memFlags & CLK_IMAGE_MEM_FENCE) {
-    memSem |= MemorySemantics::ImageMemory;
+    memSem |= (uint32_t)MemorySemantics::ImageMemory;
   }
   Register memSemReg;
   if (memFlags == memSem) {
@@ -770,7 +769,7 @@ static bool genBarrier(MachineIRBuilder &MIRBuilder,
       scopeReg = OrigArgs[1];
   }
   if (!scopeReg.isValid())
-    scopeReg = buildIConstant(scope, I32Ty, MIRBuilder, TR);
+    scopeReg = buildIConstant((uint32_t)scope, I32Ty, MIRBuilder, TR);
 
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpControlBarrier)
                  .addUse(scopeReg)
@@ -815,19 +814,21 @@ static bool genConvertInstr(MachineIRBuilder &MIRBuilder,
     if (tok == "sat") {
       isSat = true;
     } else if (tok.startswith("rt")) {
-      using namespace FPRoundingMode;
       isRounded = true;
       char r = tok[2]; // rtz, rtp, rtn, rte
-      roundingMode = r == 'z' ? RTZ : r == 'p' ? RTP : r == 'n' ? RTN : RTE;
+      roundingMode = r == 'z' ? FPRoundingMode::RTZ
+                              : r == 'p' ? FPRoundingMode::RTP
+                                         : r == 'n' ? FPRoundingMode::RTN
+                                                    : FPRoundingMode::RTE;
     }
   }
 
-  namespace Dec = Decoration;
   bool success = true;
   if (isSat)
-    success &= decorate(ret, Dec::SaturatedConversion, MIRBuilder, TR);
+    success &= decorate(ret, Decoration::SaturatedConversion, MIRBuilder, TR);
   if (isRounded && success)
-    success &= decorate(ret, Dec::FPRoundingMode, roundingMode, MIRBuilder, TR);
+    success &= decorate(ret, Decoration::FPRoundingMode, (uint32_t)roundingMode,
+                        MIRBuilder, TR);
   if (!success)
     return false;
 
@@ -866,7 +867,7 @@ static bool genConvertInstr(MachineIRBuilder &MIRBuilder,
   report_fatal_error("Convert instr not implemented yet: " + convertStr);
 }
 
-static SPIRVType *buildOpTypeImageCL(Dim::Dim dim, AQ::AccessQualifier access,
+static SPIRVType *buildOpTypeImageCL(Dim dim, AccessQualifier access,
                                      MachineIRBuilder &MIRBuilder,
                                      SPIRVTypeRegistry *TR) {
   SPIRVType *voidTy = TR->getOpTypeVoid(MIRBuilder);
@@ -893,22 +894,22 @@ static bool genOpenCLExtInst(OpenCL_std::OpenCL_std extInstID,
 SPIRVType *llvm::generateOpenCLOpaqueType(const StringRef name,
                                           MachineIRBuilder &MIRBuilder,
                                           SPIRVTypeRegistry *TR,
-                                          AQ::AccessQualifier accessQual) {
+                                          AccessQualifier accessQual) {
   assert(name.startswith("opencl.") && "CL types should start with 'opencl.'");
-  using namespace Dim;
   auto typeName = name.substr(strlen("opencl."));
 
   if (typeName.startswith("image")) {
     if (typeName.endswith("_ro_t")) {
-      accessQual = AQ::ReadOnly;
+      accessQual = AccessQualifier::ReadOnly;
     } else if (typeName.endswith("_wo_t")) {
-      accessQual = AQ::WriteOnly;
+      accessQual = AccessQualifier::WriteOnly;
     } else if (typeName.endswith("_rw_t")) {
-      accessQual = AQ::ReadWrite;
+      accessQual = AccessQualifier::ReadWrite;
     }
     char dimC = typeName[strlen("image")];
     if (dimC >= '1' && dimC <= '3') {
-      auto dim = dimC == '1' ? DIM_1D : dimC == '2' ? DIM_2D : DIM_3D;
+      auto dim =
+          dimC == '1' ? Dim::DIM_1D : dimC == '2' ? Dim::DIM_2D : Dim::DIM_3D;
       return buildOpTypeImageCL(dim, accessQual, MIRBuilder, TR);
     }
   } else if (typeName.startswith("sampler_t")) {

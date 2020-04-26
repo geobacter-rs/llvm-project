@@ -70,7 +70,7 @@ private:
 
   std::unordered_set<Extension::Extension> availableExtensions;
   std::unordered_set<ExtInstSet> availableExtInstSets;
-  std::unordered_set<Capability::Capability> availableCaps;
+  std::unordered_set<Capability> availableCaps;
 
   // The legalizer and instruction selector both rely on the set of available
   // extensions, capabilities, register bank information, and so on.
@@ -115,7 +115,7 @@ public:
 
   uint32_t getTargetSPIRVVersion() const { return targetSPIRVVersion; };
 
-  bool canUseCapability(Capability::Capability c) const;
+  bool canUseCapability(Capability c) const;
   bool canUseExtension(Extension::Extension e) const;
   bool canUseExtInstSet(ExtInstSet e) const;
 

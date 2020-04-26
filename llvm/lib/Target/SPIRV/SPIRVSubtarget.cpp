@@ -109,7 +109,7 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-bool SPIRVSubtarget::canUseCapability(Capability::Capability c) const {
+bool SPIRVSubtarget::canUseCapability(Capability c) const {
   const auto &caps = availableCaps;
   return std::find(caps.begin(), caps.end(), c) != caps.end();
 }
@@ -153,8 +153,8 @@ void SPIRVSubtarget::initAvailableExtensions(const Triple &TT) {
 }
 
 // Add the given capabilities and all their implicitly defined capabilities too
-static void addCaps(std::unordered_set<Capability::Capability> &caps,
-                    const std::vector<Capability::Capability> &toAdd) {
+static void addCaps(std::unordered_set<Capability> &caps,
+                    const std::vector<Capability> &toAdd) {
   for (const auto cap : toAdd) {
     if (caps.insert(cap).second) {
       addCaps(caps, getCapabilityCapabilities(cap));
@@ -165,33 +165,39 @@ static void addCaps(std::unordered_set<Capability::Capability> &caps,
 // TODO use command line args for this rather than defaults
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableCapabilities(const Triple &TT) {
-  using namespace Capability;
   if (TT.isVulkanEnvironment()) {
     // These are the min requirements
-    addCaps(availableCaps,
-            {Matrix, Shader, InputAttachment, Sampled1D, Image1D, SampledBuffer,
-             ImageBuffer, ImageQuery, DerivativeControl});
+    addCaps(availableCaps, {Capability::Matrix, Capability::Shader,
+                            Capability::InputAttachment, Capability::Sampled1D,
+                            Capability::Image1D, Capability::SampledBuffer,
+                            Capability::ImageBuffer, Capability::ImageQuery,
+                            Capability::DerivativeControl});
   } else {
     // Add the min requirements for different OpenCL and SPIR-V versions
     addCaps(availableCaps,
-            {Addresses, Float16Buffer, Int16, Int8, Kernel, Linkage, Vector16});
+            {Capability::Addresses, Capability::Float16Buffer,
+             Capability::Int16, Capability::Int8, Capability::Kernel,
+             Capability::Linkage, Capability::Vector16});
     if (openCLFullProfile) {
-      addCaps(availableCaps, {Int64});
+      addCaps(availableCaps, {Capability::Int64});
     }
     if (openCLImageSupport) {
-      addCaps(availableCaps, {ImageBasic, LiteralSampler, Image1D,
-                              SampledBuffer, ImageBuffer});
+      addCaps(availableCaps,
+              {Capability::ImageBasic, Capability::LiteralSampler,
+               Capability::Image1D, Capability::SampledBuffer,
+               Capability::ImageBuffer});
       if (isAtLeastVer(targetOpenCLVersion, v(2, 0))) {
-        addCaps(availableCaps, {ImageReadWrite});
+        addCaps(availableCaps, {Capability::ImageReadWrite});
       }
     }
     if (isAtLeastVer(targetSPIRVVersion, v(1, 1)) &&
         isAtLeastVer(targetOpenCLVersion, v(2, 2))) {
-      addCaps(availableCaps, {SubgroupDispatch, PipeStorage});
+      addCaps(availableCaps,
+              {Capability::SubgroupDispatch, Capability::PipeStorage});
     }
 
     // TODO Remove this - it's only here because the tests assume it's supported
-    addCaps(availableCaps, {Float16, Float64});
+    addCaps(availableCaps, {Capability::Float16, Capability::Float64});
 
     // TODO add OpenCL extensions
   }

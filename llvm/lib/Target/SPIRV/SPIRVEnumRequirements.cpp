@@ -32,29 +32,27 @@
     return MaxVer;
 
 #define DEF_CAPABILITY_FUNC_BODY(EnumName, DefEnumCommand)                     \
-  const std::vector<Capability::Capability> get##EnumName##Capabilities(       \
-      EnumName::EnumName e) {                                                  \
-    using namespace Capability;                                                \
+  const std::vector<Capability> get##EnumName##Capabilities(EnumName e) {      \
     switch (e) { DefEnumCommand(EnumName, MAKE_CAPABILITY_CASE) }              \
     return {};                                                                 \
   }
 
 #define DEF_EXTENSION_FUNC_BODY(EnumName, DefEnumCommand)                      \
   const std::vector<Extension::Extension> get##EnumName##Extensions(           \
-      EnumName::EnumName e) {                                                  \
+      EnumName e) {                                                            \
     using namespace Extension;                                                 \
     switch (e) { DefEnumCommand(EnumName, MAKE_EXTENSION_CASE) }               \
     return {};                                                                 \
   }
 
 #define DEF_MIN_VERSION_FUNC_BODY(EnumName, DefEnumCommand)                    \
-  uint32_t get##EnumName##MinVersion(EnumName::EnumName e) {                   \
+  uint32_t get##EnumName##MinVersion(EnumName e) {                             \
     switch (e) { DefEnumCommand(EnumName, MAKE_MIN_VERSION_CASE) }             \
     return 0;                                                                  \
   }
 
 #define DEF_MAX_VERSION_FUNC_BODY(EnumName, DefEnumCommand)                    \
-  uint32_t get##EnumName##MaxVersion(EnumName::EnumName e) {                   \
+  uint32_t get##EnumName##MaxVersion(EnumName e) {                             \
     switch (e) { DefEnumCommand(EnumName, MAKE_MAX_VERSION_CASE) }             \
     return 0;                                                                  \
   }
@@ -63,7 +61,7 @@
 #define DEF_REQUIREMENTS_FUNC_BODY(EnumName)                                   \
   SPIRVRequirements get##EnumName##Requirements(                               \
       uint32_t i, const llvm::SPIRVSubtarget &ST) {                            \
-    auto e = static_cast<EnumName::EnumName>(i);                               \
+    auto e = static_cast<EnumName>(i);                                         \
     auto reqMinVer = get##EnumName##MinVersion(e);                             \
     auto reqMaxVer = get##EnumName##MaxVersion(e);                             \
     auto targetVer = ST.getTargetSPIRVVersion();                               \
@@ -99,9 +97,8 @@
   }
 
 #define DEF_CAN_USE_FUNC_BODY(EnumName)                                        \
-  bool canUse##EnumName(EnumName::EnumName e,                                  \
-                        const llvm::SPIRVSubtarget &ST) {                      \
-    return get##EnumName##Requirements(e, ST).isSatisfiable;                   \
+  bool canUse##EnumName(EnumName e, const llvm::SPIRVSubtarget &ST) {          \
+    return get##EnumName##Requirements((uint32_t)e, ST).isSatisfiable;         \
   }
 
 #define GEN_ENUM_REQS_IMPL(EnumName)                                           \
