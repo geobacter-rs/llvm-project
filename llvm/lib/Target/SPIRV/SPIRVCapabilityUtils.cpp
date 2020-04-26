@@ -49,7 +49,7 @@ void SPIRVRequirementHandler::addCapabilities(const CapabilityList &toAdd) {
     }
   }
 }
-void SPIRVRequirementHandler::addCapability(Capability::Capability toAdd) {
+void SPIRVRequirementHandler::addCapability(Capability toAdd) {
   addCapabilities({toAdd});
 }
 

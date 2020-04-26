@@ -52,7 +52,7 @@ public:
 
   // State that we need MachineModuleInfo to operate on MachineFunctions
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineModuleInfoWrapperPass>();
+    AU.addRequired<MachineModuleInfo>();
   }
 };
 } // namespace
@@ -152,7 +152,7 @@ static Optional<Register> getDuplicateDef(MachineInstr &testInstr,
 }
 
 // Maps a local VReg id to the corresponding VReg id in the global meta-function
-using LocalToGlobalRegTable = DenseMap<Register, Register>;
+using LocalToGlobalRegTable = DenseMap<unsigned, Register>;
 
 // Construct a copy of the given instruction in the meta basic block using the
 // given builder. The register defined by this instruction (if any) will be
@@ -228,14 +228,17 @@ static void addHeaderOps(Module &M, MachineIRBuilder &MIRBuilder,
   unsigned ptrSize = ST.getPointerSize();
 
   // Add OpMemoryModel
-  using namespace AddressingModel;
-  auto addr = ptrSize == 32 ? Physical32 : ptrSize == 64 ? Physical64 : Logical;
-  auto mem = MemoryModel::OpenCL;
-  MIRBuilder.buildInstr(SPIRV::OpMemoryModel).addImm(addr).addImm(mem);
+  auto addr = ptrSize == 32 ? AddressingModel::Physical32
+                            : ptrSize == 64 ? AddressingModel::Physical64
+                                            : AddressingModel::Logical;
+  auto mem = (uint32_t)MemoryModel::OpenCL;
+  MIRBuilder.buildInstr(SPIRV::OpMemoryModel)
+      .addImm((uint32_t)addr)
+      .addImm(mem);
 
   // Update required capabilities for this memory model
   reqs.addRequirements(getMemoryModelRequirements(mem, ST));
-  reqs.addRequirements(getAddressingModelRequirements(addr, ST));
+  reqs.addRequirements(getAddressingModelRequirements((uint32_t)addr, ST));
 
   // Get the OpenCL version number from metadata
   unsigned openCLVersion = 0;
@@ -250,7 +253,7 @@ static void addHeaderOps(Module &M, MachineIRBuilder &MIRBuilder,
   }
 
   // Build the OpSource
-  auto srcLang = SourceLanguage::OpenCL_C;
+  auto srcLang = (uint32_t)SourceLanguage::OpenCL_C;
   MIRBuilder.buildInstr(SPIRV::OpSource).addImm(srcLang).addImm(openCLVersion);
   reqs.addRequirements(getSourceLanguageRequirements(srcLang, ST));
 }
@@ -328,7 +331,7 @@ static void hoistInstrsToMetablock(Module &M, MachineModuleInfo &MMI,
         reqs.addExtension(ext);
         toRemove.push_back(&MI);
       } else if (MI.getOpcode() == SPIRV::OpCapability) {
-        auto cap = Capability::Capability(MI.getOperand(0).getImm());
+        auto cap = Capability(MI.getOperand(0).getImm());
         reqs.addCapability(cap);
         toRemove.push_back(&MI);
       } else if (MI.getOpcode() == SPIRV::OpFunction) {
@@ -367,7 +370,7 @@ static bool allOpsMatch(const MachineInstr &A, const MachineInstr &B,
 }
 
 // Machine function index and local VReg id used as a composite key
-using FuncIdxAndVReg = std::pair<unsigned, Register>;
+using FuncIdxAndVReg = std::pair<unsigned, unsigned>;
 
 // A list of OpDecorate instructions
 using DecorationList = std::vector<MachineInstr *>;
@@ -376,10 +379,11 @@ using DecorationList = std::vector<MachineInstr *>;
 // matching arguments for LinkageAttributes, BuiltIns, or DescriptorSets.
 static bool decorationsAreDuplicates(const DecorationList &decsA,
                                      const DecorationList &decsB) {
-  namespace D = Decoration;
   for (const auto *decAInstr : decsA) {
     auto d = decAInstr->getOperand(1).getImm();
-    if (d == D::LinkageAttributes || d == D::BuiltIn || d == D::DescriptorSet) {
+    if (d == (uint32_t)Decoration::LinkageAttributes ||
+        d == (uint32_t)Decoration::BuiltIn ||
+        d == (uint32_t)Decoration::DescriptorSet) {
       for (const auto decBInstr : decsB) {
         if (allOpsMatch(*decAInstr, *decBInstr, 1)) {
           return true;
@@ -470,7 +474,7 @@ static void hoistGlobalOpVariables(Module &M, MachineModuleInfo &MMI,
   for (MachineBasicBlock &MBB : *MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() == OpVariable &&
-          MI.getOperand(2).getImm() != StorageClass::Function) {
+          MI.getOperand(2).getImm() != (uint32_t)StorageClass::Function) {
 
         // Not function local, so extract it
         Register localVReg = MI.getOperand(0).getReg();
@@ -656,8 +660,8 @@ static void addEntryPointLinkageInterfaces(Module &M, MachineModuleInfo &MMI,
     const unsigned OpCode = MI.getOpcode();
     const unsigned numOps = MI.getNumOperands();
     if (OpCode == SPIRV::OpDecorate &&
-        MI.getOperand(1).getImm() == Decoration::LinkageAttributes &&
-        MI.getOperand(numOps - 1).getImm() == LinkageType::Import) {
+        MI.getOperand(1).getImm() == (uint32_t)Decoration::LinkageAttributes &&
+        MI.getOperand(numOps - 1).getImm() == (uint32_t)LinkageType::Import) {
       const Register target = MI.getOperand(0).getReg();
       inputLinkedIDs.push_back(target);
     }
@@ -764,9 +768,9 @@ static void addExternalDeclarationsToIDMap(MachineIRBuilder &MetaBuilder,
     if (MI.getOpcode() == SPIRV::OpDecorate) {
       // If it's got Import linkage
       auto dec = MI.getOperand(1).getImm();
-      if (dec == Decoration::LinkageAttributes) {
+      if (dec == (uint32_t)Decoration::LinkageAttributes) {
         auto lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
-        if (lnk == LinkageType::Import) {
+        if (lnk == (uint32_t)LinkageType::Import) {
           // Map imported function name to function ID VReg.
           std::string name = getStringImm(MI, 2);
           Register target = MI.getOperand(0).getReg();
@@ -843,7 +847,7 @@ static void addGlobalRequirements(const SPIRVRequirementHandler &reqs,
   setMetaBlock(MIRBuilder, MB_Capabilities);
 
   for (const auto &cap : reqs.getMinimalCapabilities()) {
-    MIRBuilder.buildInstr(SPIRV::OpCapability).addImm(cap);
+    MIRBuilder.buildInstr(SPIRV::OpCapability).addImm((uint32_t)cap);
   }
 
   // Generate the final OpExtensions with strings instead of enums
@@ -859,8 +863,8 @@ static void addGlobalRequirements(const SPIRVRequirementHandler &reqs,
 // Extract all OpType, OpConst etc. into this meta block
 // Number registers globally, including references to global OpType etc.
 bool SPIRVGlobalTypesAndRegNum::runOnModule(Module &M) {
-  auto &MMIWP = getAnalysis<MachineModuleInfoWrapperPass>();
-  MachineModuleInfo &MMI = MMIWP.getMMI();
+  auto &MMIWP = getAnalysis<MachineModuleInfo>();
+  MachineModuleInfo &MMI = MMIWP;
 
   MachineIRBuilder MIRBuilder;
   initMetaBlockBuilder(M, MMI, MIRBuilder);

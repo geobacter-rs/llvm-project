@@ -83,8 +83,8 @@ void SPIRVTypeRegistry::reset() {
 }
 
 SPIRVType *SPIRVTypeRegistry::assignTypeToVReg(const Type *type, Register VReg,
-                                              MachineIRBuilder &MIRBuilder,
-                                              AQ::AccessQualifier accessQual) {
+                                               MachineIRBuilder &MIRBuilder,
+                                               AccessQualifier accessQual) {
 
   SPIRVType *spirvType = getOrCreateSPIRVType(type, MIRBuilder, accessQual);
   assignSPIRVTypeToVReg(spirvType, VReg, MIRBuilder);
@@ -277,7 +277,7 @@ static bool isOpenCLBuiltinType(const StructType *stype) {
 static SPIRVType *handleOpenCLBuiltin(const StringRef name,
                                       MachineIRBuilder &MIRBuilder,
                                       SPIRVTypeRegistry *TR,
-                                      AQ::AccessQualifier aq) {
+                                      AccessQualifier aq) {
   unsigned numStartingVRegs = MIRBuilder.getMRI()->getNumVirtRegs();
   auto resTy = generateOpenCLOpaqueType(name, MIRBuilder, TR, aq);
   if (numStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs()) {
@@ -286,19 +286,19 @@ static SPIRVType *handleOpenCLBuiltin(const StringRef name,
   return resTy;
 }
 
-SPIRVType *SPIRVTypeRegistry::getOpTypePointer(StorageClass::StorageClass sc,
-                                              SPIRVType *elemType,
-                                              MachineIRBuilder &MIRBuilder) {
+SPIRVType *SPIRVTypeRegistry::getOpTypePointer(StorageClass sc,
+                                               SPIRVType *elemType,
+                                               MachineIRBuilder &MIRBuilder) {
   auto tys = getExistingTypesForOpcode(SPIRV::OpTypePointer);
   for (const auto &ty : *tys) {
-    if (ty->getOperand(1).getImm() == sc &&
+    if (ty->getOperand(1).getImm() == (uint32_t)sc &&
         ty->getOperand(2).getReg() == getSPIRVTypeID(elemType)) {
       return ty;
     }
   }
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypePointer)
                  .addDef(createTypeVReg(MIRBuilder))
-                 .addImm(sc)
+                 .addImm((uint32_t)sc)
                  .addUse(getSPIRVTypeID(elemType));
   tys->push_back(MIB);
   return MIB;
@@ -336,8 +336,8 @@ SPIRVType *SPIRVTypeRegistry::getOpTypeFunction(
 }
 
 SPIRVType *SPIRVTypeRegistry::createSPIRVType(const Type *Ty,
-                                             MachineIRBuilder &MIRBuilder,
-                                             AQ::AccessQualifier aq) {
+                                              MachineIRBuilder &MIRBuilder,
+                                              AccessQualifier aq) {
   if (auto itype = dyn_cast<IntegerType>(Ty)) {
     const unsigned int width = itype->getBitWidth();
     return width == 1 ? getOpTypeBool(MIRBuilder)
@@ -399,10 +399,9 @@ SPIRVType *SPIRVTypeRegistry::getSPIRVTypeForVReg(Register VReg) {
   return t == VRegToTypeMap.end() ? nullptr : t->second;
 }
 
-SPIRVType *
-SPIRVTypeRegistry::getOrCreateSPIRVType(const Type *type,
-                                       MachineIRBuilder &MIRBuilder,
-                                       AQ::AccessQualifier accessQual) {
+SPIRVType *SPIRVTypeRegistry::getOrCreateSPIRVType(const Type *type,
+                                                   MachineIRBuilder &MIRBuilder,
+                                                   AccessQualifier accessQual) {
 
   auto SPIRVTypeIt = TypeToSPIRVTypeMap.find(type);
   if (SPIRVTypeIt != TypeToSPIRVTypeMap.end()) {
@@ -468,46 +467,44 @@ bool SPIRVTypeRegistry::isScalarOrVectorSigned(const SPIRVType *type) {
   llvm_unreachable("Attempting to get sign of non-integer type.");
 }
 
-StorageClass::StorageClass
-SPIRVTypeRegistry::getPointerStorageClass(Register vreg) {
+StorageClass SPIRVTypeRegistry::getPointerStorageClass(Register vreg) {
   SPIRVType *type = getSPIRVTypeForVReg(vreg);
   if (type && type->getOpcode() == SPIRV::OpTypePointer) {
     auto scOp = type->getOperand(1).getImm();
-    return static_cast<StorageClass::StorageClass>(scOp);
+    return static_cast<StorageClass>(scOp);
   }
   llvm_unreachable("Attempting to get storage class of non-pointer type.");
 }
 
 SPIRVType *SPIRVTypeRegistry::getGenericPtrType(SPIRVType *origPtrType,
                                                MachineIRBuilder &MIRBuilder) {
-  using namespace StorageClass;
   if (origPtrType && origPtrType->getOpcode() == SPIRV::OpTypePointer) {
     auto scOp = origPtrType->getOperand(1).getImm();
-    if (scOp == Generic) {
+    if (scOp == (uint32_t)StorageClass::Generic) {
       return origPtrType;
     } else {
       auto elemTy = getSPIRVTypeForVReg(origPtrType->getOperand(2).getReg());
-      return getOpTypePointer(Generic, elemTy, MIRBuilder);
+      return getOpTypePointer(StorageClass::Generic, elemTy, MIRBuilder);
     }
   }
   llvm_unreachable("Attempting to get generic equivalent of non-pointer type.");
 }
 
 SPIRVType *SPIRVTypeRegistry::getOpTypeImage(
-    MachineIRBuilder &MIRBuilder, SPIRVType *sampledType, Dim::Dim dim,
+    MachineIRBuilder &MIRBuilder, SPIRVType *sampledType, Dim dim,
     uint32_t depth, uint32_t arrayed, uint32_t multisampled, uint32_t sampled,
-    ImageFormat::ImageFormat imageFormat, AQ::AccessQualifier accessQualifier) {
+    ImageFormat imageFormat, AccessQualifier accessQualifier) {
 
   auto tys = getExistingTypesForOpcode(SPIRV::OpTypeImage);
   for (const auto &ty : *tys) {
     if (ty->getOperand(1).getReg() == getSPIRVTypeID(sampledType) &&
-        ty->getOperand(2).getImm() == dim &&
-        ty->getOperand(8).getImm() == accessQualifier &&
+        ty->getOperand(2).getImm() == (uint32_t)dim &&
+        ty->getOperand(8).getImm() == (uint32_t)accessQualifier &&
         ty->getOperand(3).getImm() == arrayed &&
         ty->getOperand(6).getImm() == sampled &&
         ty->getOperand(5).getImm() == multisampled &&
         ty->getOperand(3).getImm() == depth &&
-        ty->getOperand(7).getImm() == imageFormat) {
+        ty->getOperand(7).getImm() == (uint32_t)imageFormat) {
       return ty;
     }
   }
@@ -515,13 +512,13 @@ SPIRVType *SPIRVTypeRegistry::getOpTypeImage(
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeImage)
                  .addDef(resVReg)
                  .addUse(getSPIRVTypeID(sampledType))
-                 .addImm(dim)
+                 .addImm((uint32_t)dim)
                  .addImm(depth)   // Depth (whether or not it is a depth image)
                  .addImm(arrayed) // Arrayed
                  .addImm(multisampled) // Multisampled (0 = only single-sample)
                  .addImm(sampled)      // Sampled (0 = usage known at runtime)
-                 .addImm(imageFormat)
-                 .addImm(accessQualifier);
+                 .addImm((uint32_t)imageFormat)
+                 .addImm((uint32_t)accessQualifier);
   tys->push_back(MIB);
   return MIB;
 }
@@ -555,8 +552,7 @@ SPIRVType *SPIRVTypeRegistry::getSampledImageType(SPIRVType *imageType,
   return MIB;
 }
 
-unsigned int
-SPIRVTypeRegistry::StorageClassToAddressSpace(StorageClass::StorageClass sc) {
+unsigned int SPIRVTypeRegistry::StorageClassToAddressSpace(StorageClass sc) {
   // TODO maybe this should be handled in the subtarget to allow for different
   // OpenCL vs Vulkan handling?
   switch (sc) {
@@ -578,7 +574,7 @@ SPIRVTypeRegistry::StorageClassToAddressSpace(StorageClass::StorageClass sc) {
   }
 }
 
-StorageClass::StorageClass
+StorageClass
 SPIRVTypeRegistry::addressSpaceToStorageClass(unsigned int addressSpace) {
   // TODO maybe this should be handled in the subtarget to allow for different
   // OpenCL vs Vulkan handling?
