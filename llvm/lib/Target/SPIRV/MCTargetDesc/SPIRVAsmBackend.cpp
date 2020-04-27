@@ -67,6 +67,6 @@ MCAsmBackend *llvm::createSPIRVAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &) {
-  return new SPIRVAsmBackend(support::little);
+  return new SPIRVAsmBackend(support::endian::system_endianness());
 }
 
