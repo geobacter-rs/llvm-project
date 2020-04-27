@@ -34,12 +34,12 @@ namespace {
 class SPIRVMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
   const MCRegisterInfo &MRI;
-  bool IsLittleEndian;
+  support::endianness Endianness;
 
 public:
   SPIRVMCCodeEmitter(const MCInstrInfo &mcii, const MCRegisterInfo &mri,
-                     bool IsLittleEndian)
-      : MCII(mcii), MRI(mri), IsLittleEndian(IsLittleEndian) {}
+                     support::endianness E)
+      : MCII(mcii), MRI(mri), Endianness(E) {}
   SPIRVMCCodeEmitter(const SPIRVMCCodeEmitter &) = delete;
   void operator=(const SPIRVMCCodeEmitter &) = delete;
   ~SPIRVMCCodeEmitter() override = default;
@@ -65,7 +65,10 @@ private:
 MCCodeEmitter *llvm::createSPIRVMCCodeEmitter(const MCInstrInfo &MCII,
                                               const MCRegisterInfo &MRI,
                                               MCContext &Ctx) {
-  return new SPIRVMCCodeEmitter(MCII, MRI, true);
+  // SPIRV must use the host endianness for both Vulkan and OpenCL.
+  // TODO: "cross compile" from, eg, big to little?
+  return new SPIRVMCCodeEmitter(MCII, MRI,
+                                support::endian::system_endianness());
 }
 
 using EndianWriter = support::endian::Writer;
@@ -123,7 +126,7 @@ void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   auto features = computeAvailableFeatures(STI.getFeatureBits());
   verifyInstructionPredicates(MI, features);
 
-  EndianWriter OSE(OS, IsLittleEndian ? support::little : support::big);
+  EndianWriter OSE(OS, Endianness);
 
   // Encode the first 32 SPIR-V bytes with the number of args and the opcode
   uint64_t OpCode = getBinaryCodeForInstr(MI, Fixups, STI);
