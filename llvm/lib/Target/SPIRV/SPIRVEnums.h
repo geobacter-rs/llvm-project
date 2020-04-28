@@ -128,13 +128,6 @@
 
 #define SK(Suff) SPV_KHR_##Suff
 
-#define ANUIE(Pref) Pref##ArrayNonUniformIndexingEXT
-#define SBBA(Bits) StorageBuffer##Bits##BitAccess
-#define SB8BA(Pref) Pref##StorageBuffer8BitAccess
-#define ADIE(Pref) Pref##ArrayDynamicIndexingEXT
-#define SNUE ShaderNonUniformEXT
-#define VAR_PTR_SB VariablePointersStorageBuffer
-
 #define DRAW_PARAMS SPV_KHR_shader_draw_parameters
 #define SPV_16_BIT SPV_KHR_16bit_storeage
 #define SPV_VAR_PTR SPV_KHR_variable_pointers
@@ -215,21 +208,22 @@
   X(N, SubgroupBallotKHR, 4423, {}, {SPV_KHR_shader_ballot}, 0, 0)             \
   X(N, DrawParameters, 4427, {Capability::Shader}, {DRAW_PARAMS}, 0x10300, 0)  \
   X(N, SubgroupVoteKHR, 4431, {}, {SPV_KHR_subgroup_vote}, 0, 0)               \
-  X(N, SBBA(16), 4433, {}, {SPV_16_BIT}, 0x10300, 0)                           \
-  X(N, StorageUniform16, 4434, {Capability::SBBA(16)}, {SPV_16_BIT}, 0x10300,  \
-    0)                                                                         \
+  X(N, StorageBuffer16BitAccess, 4433, {}, {SPV_16_BIT}, 0x10300, 0)           \
+  X(N, StorageUniform16, 4434, {Capability::StorageBuffer16BitAccess},         \
+    {SPV_16_BIT}, 0x10300, 0)                                                  \
   X(N, StoragePushConstant16, 4435, {}, {SPV_16_BIT}, 0x10300, 0)              \
   X(N, StorageInputOutput16, 4436, {}, {SPV_16_BIT}, 0x10300, 0)               \
   X(N, DeviceGroup, 4437, {}, {SPV_KHR_device_group}, 0x10300, 0)              \
   X(N, MultiView, 4439, {Capability::Shader}, {SPV_KHR_multiview}, 0x10300, 0) \
-  X(N, VAR_PTR_SB, 4441, {Capability::Shader}, {SPV_VAR_PTR}, 0x10300, 0)      \
-  X(N, VariablePointers, 4442, {Capability::VAR_PTR_SB}, {SPV_VAR_PTR},        \
-    0x10300, 0)                                                                \
+  X(N, VariablePointersStorageBuffer, 4441, {Capability::Shader},              \
+    {SPV_VAR_PTR}, 0x10300, 0)                                                 \
+  X(N, VariablePointers, 4442, {Capability::VariablePointersStorageBuffer},    \
+    {SPV_VAR_PTR}, 0x10300, 0)                                                 \
   X(N, AtomicStorageOps, 4445, {}, {SPV_KHR_shader_atomic_counter_ops}, 0, 0)  \
   X(N, SampleMaskPostDepthCoverage, 4447, {}, {SPV_PDC}, 0, 0)                 \
   X(N, StorageBuffer8BitAccess, 4448, {}, {SPV_KHR_8bit_storage}, 0, 0)        \
-  X(N, SB8BA(UniformAnd), 4449, {Capability::SBBA(8)}, {SPV_KHR_8bit_storage}, \
-    0, 0)                                                                      \
+  X(N, UniformAndStorageBuffer8BitAccess, 4449,                                \
+    {Capability::StorageBuffer8BitAccess}, {SPV_KHR_8bit_storage}, 0, 0)       \
   X(N, StoragePushConstant8, 4450, {}, {SPV_KHR_8bit_storage}, 0, 0)           \
   X(N, DenormPreserve, 4464, {}, {SPV_FLT_CTRL}, 0x10400, 0)                   \
   X(N, DenormFlushToZero, 4465, {}, {SPV_FLT_CTRL}, 0x10400, 0)                \
@@ -254,21 +248,29 @@
   X(N, MeshShadingNV, 5266, {Capability::Shader}, {}, 0, 0)                    \
   X(N, ShaderNonUniformEXT, 5301, {Capability::Shader}, {}, 0, 0)              \
   X(N, RuntimeDescriptorArrayEXT, 5302, {Capability::Shader}, {}, 0, 0)        \
-  X(N, ADIE(InputAttachment), 5303, {Capability::InputAttachment}, {}, 0, 0)   \
-  X(N, ADIE(UniformTexelBuffer), 5304, {Capability::SampledBuffer}, {}, 0, 0)  \
-  X(N, ADIE(StorageTexelBuffer), 5305, {Capability::ImageBuffer}, {}, 0, 0)    \
-  X(N, ANUIE(UniformBuffer), 5306, {Capability::ShaderNonUniformEXT}, {}, 0,   \
+  X(N, InputAttachmentArrayDynamicIndexingEXT, 5303,                           \
+    {Capability::InputAttachment}, {}, 0, 0)                                   \
+  X(N, UniformTexelBufferArrayDynamicIndexingEXT, 5304,                        \
+    {Capability::SampledBuffer}, {}, 0, 0)                                     \
+  X(N, StorageTexelBufferArrayDynamicIndexingEXT, 5305,                        \
+    {Capability::ImageBuffer}, {}, 0, 0)                                       \
+  X(N, UniformBufferArrayNonUniformIndexingEXT, 5306,                          \
+    {Capability::ShaderNonUniformEXT}, {}, 0, 0)                               \
+  X(N, SampledImageArrayNonUniformIndexingEXT, 5307,                           \
+    {Capability::ShaderNonUniformEXT}, {}, 0, 0)                               \
+  X(N, StorageBufferArrayNonUniformIndexingEXT, 5308,                          \
+    {Capability::ShaderNonUniformEXT}, {}, 0, 0)                               \
+  X(N, StorageImageArrayNonUniformIndexingEXT, 5309,                           \
+    {Capability::ShaderNonUniformEXT}, {}, 0, 0)                               \
+  X(N, InputAttachmentArrayNonUniformIndexingEXT, 5310,                        \
+    LIST({Capability::InputAttachment, Capability::ShaderNonUniformEXT}), {},  \
+    0, 0)                                                                      \
+  X(N, UniformTexelBufferArrayNonUniformIndexingEXT, 5311,                     \
+    LIST({Capability::SampledBuffer, Capability::ShaderNonUniformEXT}), {}, 0, \
     0)                                                                         \
-  X(N, ANUIE(SampledImage), 5307, {Capability::ShaderNonUniformEXT}, {}, 0, 0) \
-  X(N, ANUIE(StorageBuffer), 5308, {Capability::ShaderNonUniformEXT}, {}, 0,   \
+  X(N, StorageTexelBufferArrayNonUniformIndexingEXT, 5312,                     \
+    LIST({Capability::ImageBuffer, Capability::ShaderNonUniformEXT}), {}, 0,   \
     0)                                                                         \
-  X(N, ANUIE(StorageImage), 5309, {Capability::ShaderNonUniformEXT}, {}, 0, 0) \
-  X(N, ANUIE(InputAttachment), 5310,                                           \
-    LIST({Capability::InputAttachment, Capability::SNUE}), {}, 0, 0)           \
-  X(N, ANUIE(UniformTexelBuffer), 5311,                                        \
-    LIST({Capability::SampledBuffer, Capability::SNUE}), {}, 0, 0)             \
-  X(N, ANUIE(StorageTexelBuffer), 5312,                                        \
-    LIST({Capability::ImageBuffer, Capability::SNUE}), {}, 0, 0)               \
   X(N, RayTracingNV, 5340, {Capability::Shader}, {}, 0, 0)                     \
   X(N, SubgroupShuffleINTEL, 5568, {}, {}, 0, 0)                               \
   X(N, SubgroupBufferBlockIOINTEL, 5569, {}, {}, 0, 0)                         \
@@ -285,8 +287,7 @@
   X(N, ComputeDerivativeGroupQuadsNV, 5288, {}, {}, 0, 0)                      \
   X(N, ComputeDerivativeGroupLinearNV, 5350, {}, {}, 0, 0)                     \
   X(N, FragmentDensityEXT, 5291, {Capability::Shader}, {}, 0, 0)               \
-  X(N, PhysicalStorageBufferAddressesEXT, 5347, {Capability::Shader}, {}, 0,   \
-    0)                                                                         \
+  X(N, PhysicalStorageBufferAddresses, 5347, {Capability::Shader}, {}, 0, 0)   \
   X(N, CooperativeMatrixNV, 5357, {Capability::Shader}, {}, 0, 0)
 GEN_ENUM_HEADER(Capability)
 
@@ -299,12 +300,12 @@ GEN_ENUM_HEADER(Capability)
   X(N, HLSL, 5, {}, {}, 0, 0)
 GEN_ENUM_HEADER(SourceLanguage)
 
-#define PSB(Suff) PhysicalStorageBuffer##Suff
 #define DEF_AddressingModel(N, X)                                              \
   X(N, Logical, 0, {}, {}, 0, 0)                                               \
   X(N, Physical32, 1, {Capability::Addresses}, {}, 0, 0)                       \
   X(N, Physical64, 2, {Capability::Addresses}, {}, 0, 0)                       \
-  X(N, PSB(64EXT), 5348, {Capability::PSB(AddressesEXT)}, {}, 0, 0)
+  X(N, PhysicalStorageBuffer64, 5348,                                          \
+    {Capability::PhysicalStorageBufferAddresses}, {}, 0, 0)
 GEN_ENUM_HEADER(AddressingModel)
 
 #define DEF_ExecutionModel(N, X)                                               \
@@ -332,9 +333,6 @@ GEN_ENUM_HEADER(ExecutionModel)
   X(N, VulkanKHR, 3, {Capability::VulkanMemoryModelKHR}, {}, 0, 0)
 GEN_ENUM_HEADER(MemoryModel)
 
-#define MSNV Capability::MeshShadingNV
-#define DG1(Suff) DerivativeGroup##Suff
-#define DG2(Pref, Suff) Pref##DerivativeGroup##Suff
 #define DEF_ExecutionMode(N, X)                                                \
   X(N, Invocations, 0, {Capability::Geometry}, {}, 0, 0)                       \
   X(N, SpacingEqual, 1, {Capability::Tessellation}, {}, 0, 0)                  \
@@ -363,7 +361,9 @@ GEN_ENUM_HEADER(MemoryModel)
   X(N, Quads, 24, {Capability::Tessellation}, {}, 0, 0)                        \
   X(N, Isolines, 25, {Capability::Tessellation}, {}, 0, 0)                     \
   X(N, OutputVertices, 26,                                                     \
-    LIST({Capability::Geometry, Capability::Tessellation, MSNV}), {}, 0, 0)    \
+    LIST({Capability::Geometry, Capability::Tessellation,                      \
+          Capability::MeshShadingNV}),                                         \
+    {}, 0, 0)                                                                  \
   X(N, OutputPoints, 27,                                                       \
     LIST({Capability::Geometry, Capability::MeshShadingNV}), {}, 0, 0)         \
   X(N, OutputLineStrip, 28, {Capability::Geometry}, {}, 0, 0)                  \
@@ -387,8 +387,10 @@ GEN_ENUM_HEADER(MemoryModel)
   X(N, RoundingModeRTZ, 4463, {Capability::RoundingModeRTZ}, {}, 0, 0)         \
   X(N, StencilRefReplacingEXT, 5027, {Capability::StencilExportEXT}, {}, 0, 0) \
   X(N, OutputLinesNV, 5269, {Capability::MeshShadingNV}, {}, 0, 0)             \
-  X(N, DG1(QuadsNV), 5289, {Capability::DG2(Compute, QuadsNV)}, {}, 0, 0)      \
-  X(N, DG1(LinearNV), 5290, {Capability::DG2(Compute, LinearNV)}, {}, 0, 0)    \
+  X(N, DerivativeGroupQuadsNV, 5289,                                           \
+    {Capability::ComputeDerivativeGroupQuadsNV}, {}, 0, 0)                     \
+  X(N, DerivativeGroupLinearNV, 5290,                                          \
+    {Capability::ComputeDerivativeGroupLinearNV}, {}, 0, 0)                    \
   X(N, OutputTrianglesNV, 5298, {Capability::MeshShadingNV}, {}, 0, 0)
 GEN_ENUM_HEADER(ExecutionMode)
 
@@ -412,7 +414,8 @@ GEN_ENUM_HEADER(ExecutionMode)
   X(N, HitAttributeNV, 5339, {Capability::RayTracingNV}, {}, 0, 0)             \
   X(N, IncomingRayPayloadNV, 5342, {Capability::RayTracingNV}, {}, 0, 0)       \
   X(N, ShaderRecordBufferNV, 5343, {Capability::RayTracingNV}, {}, 0, 0)       \
-  X(N, PSB(EXT), 5349, {Capability::PSB(AddressesEXT)}, {}, 0, 0)
+  X(N, PhysicalStorageBuffer, 5349,                                            \
+    {Capability::PhysicalStorageBufferAddresses}, {}, 0, 0)
 GEN_ENUM_HEADER(StorageClass)
 
 // Need to manually do the getDimName() function, as "1D" is not a valid token
@@ -656,13 +659,12 @@ GEN_ENUM_HEADER(FunctionParameterAttribute)
   X(N, NonUniformEXT, 5300, {Capability::ShaderNonUniformEXT}, {}, 0, 0)       \
   X(N, CountBuffer, 5634, {}, {}, 0, 0)                                        \
   X(N, UserSemantic, 5635, {}, {}, 0, 0)                                       \
-  X(N, RestrictPointerEXT, 5355, {Capability::PSB(AddressesEXT)}, {}, 0, 0)    \
-  X(N, AliasedPointerEXT, 5356, {Capability::PSB(AddressesEXT)}, {}, 0, 0)
+  X(N, RestrictPointer, 5355, {Capability::PhysicalStorageBufferAddresses},    \
+    {}, 0, 0)                                                                  \
+  X(N, AliasedPointer, 5356, {Capability::PhysicalStorageBufferAddresses}, {}, \
+    0, 0)
 GEN_ENUM_HEADER(Decoration)
 
-#define SBK Capability::SubgroupBallotKHR
-#define PVANV Capability::PerViewAttributesNV
-#define MSNV Capability::MeshShadingNV
 #define DEF_BuiltIn(N, X)                                                      \
   X(N, Position, 0, {Capability::Shader}, {}, 0, 0)                            \
   X(N, PointSize, 1, {Capability::Shader}, {}, 0, 0)                           \
@@ -702,7 +704,9 @@ GEN_ENUM_HEADER(Decoration)
   X(N, GlobalOffset, 33, {Capability::Kernel}, {}, 0, 0)                       \
   X(N, GlobalLinearId, 34, {Capability::Kernel}, {}, 0, 0)                     \
   X(N, SubgroupSize, 36,                                                       \
-    LIST({Capability::Kernel, Capability::GroupNonUniform, SBK}), {}, 0, 0)    \
+    LIST({Capability::Kernel, Capability::GroupNonUniform,                     \
+          Capability::SubgroupBallotKHR}),                                     \
+    {}, 0, 0)                                                                  \
   X(N, SubgroupMaxSize, 37, {Capability::Kernel}, {}, 0, 0)                    \
   X(N, NumSubgroups, 38,                                                       \
     LIST({Capability::Kernel, Capability::GroupNonUniform}), {}, 0, 0)         \
@@ -710,18 +714,25 @@ GEN_ENUM_HEADER(Decoration)
   X(N, SubgroupId, 40,                                                         \
     LIST({Capability::Kernel, Capability::GroupNonUniform}), {}, 0, 0)         \
   X(N, SubgroupLocalInvocationId, 41,                                          \
-    LIST({Capability::Kernel, Capability::GroupNonUniform, SBK}), {}, 0, 0)    \
+    LIST({Capability::Kernel, Capability::GroupNonUniform,                     \
+          Capability::SubgroupBallotKHR}),                                     \
+    {}, 0, 0)                                                                  \
   X(N, VertexIndex, 42, {Capability::Shader}, {}, 0, 0)                        \
   X(N, InstanceIndex, 43, {Capability::Shader}, {}, 0, 0)                      \
-  X(N, SubgroupEqMask, 4416, LIST({SBK, Capability::GroupNonUniformBallot}),   \
+  X(N, SubgroupEqMask, 4416,                                                   \
+    LIST({Capability::SubgroupBallotKHR, Capability::GroupNonUniformBallot}),  \
     {}, 0, 0)                                                                  \
-  X(N, SubgroupGeMask, 4417, LIST({SBK, Capability::GroupNonUniformBallot}),   \
+  X(N, SubgroupGeMask, 4417,                                                   \
+    LIST({Capability::SubgroupBallotKHR, Capability::GroupNonUniformBallot}),  \
     {}, 0, 0)                                                                  \
-  X(N, SubgroupGtMask, 4418, LIST({SBK, Capability::GroupNonUniformBallot}),   \
+  X(N, SubgroupGtMask, 4418,                                                   \
+    LIST({Capability::SubgroupBallotKHR, Capability::GroupNonUniformBallot}),  \
     {}, 0, 0)                                                                  \
-  X(N, SubgroupLeMask, 4419, LIST({SBK, Capability::GroupNonUniformBallot}),   \
+  X(N, SubgroupLeMask, 4419,                                                   \
+    LIST({Capability::SubgroupBallotKHR, Capability::GroupNonUniformBallot}),  \
     {}, 0, 0)                                                                  \
-  X(N, SubgroupLtMask, 4420, LIST({SBK, Capability::GroupNonUniformBallot}),   \
+  X(N, SubgroupLtMask, 4420,                                                   \
+    LIST({Capability::SubgroupBallotKHR, Capability::GroupNonUniformBallot}),  \
     {}, 0, 0)                                                                  \
   X(N, BaseVertex, 4424, {Capability::DrawParameters}, {}, 0, 0)               \
   X(N, BaseInstance, 4425, {Capability::DrawParameters}, {}, 0, 0)             \
@@ -737,15 +748,18 @@ GEN_ENUM_HEADER(Decoration)
   X(N, BaryCoordSmoothSample, 4497, {}, {}, 0, 0)                              \
   X(N, BaryCoordPullModel, 4498, {}, {}, 0, 0)                                 \
   X(N, FragStencilRefEXT, 5014, {Capability::StencilExportEXT}, {}, 0, 0)      \
-  X(N, ViewportMaskNV, 5253, LIST({Capability::ShaderViewportMaskNV, MSNV}),   \
-    {}, 0, 0)                                                                  \
+  X(N, ViewportMaskNV, 5253,                                                   \
+    LIST({Capability::ShaderViewportMaskNV, Capability::MeshShadingNV}), {},   \
+    0, 0)                                                                      \
   X(N, SecondaryPositionNV, 5257, {Capability::ShaderStereoViewNV}, {}, 0, 0)  \
   X(N, SecondaryViewportMaskNV, 5258, {Capability::ShaderStereoViewNV}, {}, 0, \
     0)                                                                         \
-  X(N, PositionPerViewNV, 5261, LIST({PVANV, Capability::MeshShadingNV}), {},  \
-    0, 0)                                                                      \
-  X(N, ViewportMaskPerViewNV, 5262, LIST({PVANV, Capability::MeshShadingNV}),  \
-    {}, 0, 0)                                                                  \
+  X(N, PositionPerViewNV, 5261,                                                \
+    LIST({Capability::PerViewAttributesNV, Capability::MeshShadingNV}), {}, 0, \
+    0)                                                                         \
+  X(N, ViewportMaskPerViewNV, 5262,                                            \
+    LIST({Capability::PerViewAttributesNV, Capability::MeshShadingNV}), {}, 0, \
+    0)                                                                         \
   X(N, FullyCoveredEXT, 5264, {Capability::FragmentFullyCoveredEXT}, {}, 0, 0) \
   X(N, TaskCountNV, 5274, {Capability::MeshShadingNV}, {}, 0, 0)               \
   X(N, PrimitiveCountNV, 5275, {Capability::MeshShadingNV}, {}, 0, 0)          \

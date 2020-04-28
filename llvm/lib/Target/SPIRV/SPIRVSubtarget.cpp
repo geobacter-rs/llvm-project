@@ -97,6 +97,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   initAvailableExtensions(TT);
   initAvailableExtInstSets(TT);
   initAvailableCapabilities(TT);
+  updateCapabilitiesFromFeatures();
 
   Legalizer.reset(new SPIRVLegalizerInfo(*this));
   InstSelector.reset(
@@ -105,6 +106,18 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
 
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
                                                           StringRef FS) {
+
+  // Initialize the HasXXX bits:
+#define MAKE_CAP_FEATURE_FIELDS(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)    \
+  Has##Var = false;
+#define DEF_CAP_FEATURES(EnumName, DefCommand)                                 \
+  DefCommand(EnumName, MAKE_CAP_FEATURE_FIELDS)
+
+  DEF_CAP_FEATURES(Capability, DEF_Capability)
+
+#undef DEF_CAP_FEATURES
+#undef MAKE_CAP_FEATURE_FIELDS
+
   ParseSubtargetFeatures(CPU, FS);
   return *this;
 }
@@ -152,52 +165,35 @@ void SPIRVSubtarget::initAvailableExtensions(const Triple &TT) {
   }
 }
 
-// Add the given capabilities and all their implicitly defined capabilities too
-static void addCaps(std::unordered_set<Capability> &caps,
-                    const std::vector<Capability> &toAdd) {
-  for (const auto cap : toAdd) {
-    if (caps.insert(cap).second) {
-      addCaps(caps, getCapabilityCapabilities(cap));
-    }
-  }
-}
-
 // TODO use command line args for this rather than defaults
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableCapabilities(const Triple &TT) {
   if (TT.isVulkanEnvironment()) {
     // These are the min requirements
-    addCaps(availableCaps, {Capability::Matrix, Capability::Shader,
-                            Capability::InputAttachment, Capability::Sampled1D,
-                            Capability::Image1D, Capability::SampledBuffer,
-                            Capability::ImageBuffer, Capability::ImageQuery,
-                            Capability::DerivativeControl});
+    HasMatrix = HasShader = HasInputAttachment = HasSampled1D = HasImage1D =
+        HasSampledBuffer = HasImageBuffer = HasImageQuery =
+            HasDerivativeControl = true;
   } else {
     // Add the min requirements for different OpenCL and SPIR-V versions
-    addCaps(availableCaps,
-            {Capability::Addresses, Capability::Float16Buffer,
-             Capability::Int16, Capability::Int8, Capability::Kernel,
-             Capability::Linkage, Capability::Vector16});
+    HasAddresses = HasFloat16Buffer = HasInt16 = HasInt8 = HasKernel =
+        HasLinkage = HasVector16 = true;
     if (openCLFullProfile) {
-      addCaps(availableCaps, {Capability::Int64});
+      HasInt64 = true;
     }
     if (openCLImageSupport) {
-      addCaps(availableCaps,
-              {Capability::ImageBasic, Capability::LiteralSampler,
-               Capability::Image1D, Capability::SampledBuffer,
-               Capability::ImageBuffer});
+      HasImageBasic = HasLiteralSampler = HasImage1D = HasSampledBuffer =
+          HasImageBuffer = true;
       if (isAtLeastVer(targetOpenCLVersion, v(2, 0))) {
-        addCaps(availableCaps, {Capability::ImageReadWrite});
+        HasImageReadWrite = true;
       }
     }
     if (isAtLeastVer(targetSPIRVVersion, v(1, 1)) &&
         isAtLeastVer(targetOpenCLVersion, v(2, 2))) {
-      addCaps(availableCaps,
-              {Capability::SubgroupDispatch, Capability::PipeStorage});
+      HasPipeStorage = true;
     }
 
     // TODO Remove this - it's only here because the tests assume it's supported
-    addCaps(availableCaps, {Capability::Float16, Capability::Float64});
+    HasFloat16 = HasFloat64 = true;
 
     // TODO add OpenCL extensions
   }
@@ -216,4 +212,43 @@ void SPIRVSubtarget::initAvailableExtInstSets(const Triple &TT) {
   if (canUseExtension(Extension::SPV_AMD_shader_trinary_minmax)) {
     availableExtInstSets.insert(ExtInstSet::SPV_AMD_shader_trinary_minmax);
   }
+}
+
+void SPIRVSubtarget::enableFeatureCapability(const Capability Cap) {
+#define MAKE_CAP_FEATURE_CASE(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)      \
+  if (!Has##Var && Cap == Enum::Var) {                                         \
+    Has##Var = true;                                                           \
+    availableCaps.insert(Enum::Var);                                           \
+    enableFeatureCapabilities(Caps);                                           \
+  }
+#define DEF_CAP_FEATURES(EnumName, DefCommand)                                 \
+  DefCommand(EnumName, MAKE_CAP_FEATURE_CASE)
+
+  DEF_CAP_FEATURES(Capability, DEF_Capability)
+
+#undef DEF_CAP_FEATURES
+#undef MAKE_CAP_FEATURE_CASE
+}
+void SPIRVSubtarget::enableFeatureCapabilities(
+    const ArrayRef<Capability> Caps) {
+  for (const auto Cap : Caps) {
+    enableFeatureCapability(Cap);
+  }
+}
+
+void SPIRVSubtarget::updateCapabilitiesFromFeatures() {
+#define MAKE_CAP_FEATURE_CASE(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)      \
+  if (Has##Var) {                                                              \
+    availableCaps.insert(Enum::Var);                                           \
+    enableFeatureCapabilities(Caps);                                           \
+  } else if (!availableCaps.empty()) {                                         \
+    availableCaps.erase(Enum::Var);                                            \
+  }
+#define DEF_CAP_FEATURES(EnumName, DefCommand)                                 \
+  DefCommand(EnumName, MAKE_CAP_FEATURE_CASE)
+
+  DEF_CAP_FEATURES(Capability, DEF_Capability)
+
+#undef DEF_CAP_FEATURES
+#undef MAKE_CAP_FEATURE_CASE
 }
