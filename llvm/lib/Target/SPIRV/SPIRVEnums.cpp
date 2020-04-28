@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVEnums.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
 
 GEN_ENUM_IMPL(Capability)
 GEN_ENUM_IMPL(SourceLanguage)
@@ -39,6 +42,17 @@ std::string getDimName(Dim dim) {
   case Dim::DIM_SubpassData:
     return "SubpassData";
   }
+}
+llvm::Optional<Dim> getDimFromStr(llvm::StringRef Name) {
+  return llvm::StringSwitch<llvm::Optional<Dim>>(Name)
+      .Case("1D", {Dim::DIM_1D})
+      .Case("2D", {Dim::DIM_2D})
+      .Case("3D", {Dim::DIM_3D})
+      .Case("Cube", {Dim::DIM_Cube})
+      .Case("Rect", {Dim::DIM_Rect})
+      .Case("Buffer", {Dim::DIM_Buffer})
+      .Case("SubpassData", {Dim::DIM_SubpassData})
+      .Default(llvm::None);
 }
 
 GEN_ENUM_IMPL(SamplerAddressingMode)

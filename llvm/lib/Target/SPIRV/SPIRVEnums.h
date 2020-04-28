@@ -24,8 +24,14 @@
 #define LLVM_LIB_TARGET_SPIRV_ENUMS_H
 
 #include "SPIRVExtensions.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include <string>
 #include <vector>
+
+namespace llvm {
+class Metadata;
+}
 
 // Macros to define an enum and the functions to return its name and its
 // required capabilities, extensions, and SPIR-V versions
@@ -37,6 +43,9 @@
 #define MAKE_NAME_CASE(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)             \
   case Enum::Var:                                                              \
     return #Var;
+
+#define MAKE_RNAME_CASE(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)            \
+  .Case(#Var, {Enum::Var})
 
 #define MAKE_MASK_ENUM_NAME_CASE(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)   \
   if (e == Enum::Var) {                                                        \
@@ -57,11 +66,41 @@
 #define DEF_NAME_FUNC_HEADER(EnumName)                                         \
   std::string get##EnumName##Name(EnumName e);
 
+#define DEF_RNAME_FUNC_HEADER(EnumName)                                        \
+  llvm::Optional<EnumName> get##EnumName##FromStr(llvm::StringRef Name);
+
+#define DEF_DECODE_MD_FUNC_HEADER(EnumName)                                    \
+  llvm::Optional<EnumName> decode##EnumName##MD(const llvm::Metadata *MD);
+
 // Use this for enums that can only take a single value
 #define DEF_NAME_FUNC_BODY(EnumName, DefEnumCommand)                           \
   std::string get##EnumName##Name(EnumName e) {                                \
     switch (e) { DefEnumCommand(EnumName, MAKE_NAME_CASE) }                    \
-    return "UNKNOWN_ENUM";                                                     \
+    return std::string();                                                      \
+  }
+
+#define DEF_RNAME_FUNC_BODY(EnumName, DefEnumCommand)                          \
+  llvm::Optional<EnumName> get##EnumName##FromStr(llvm::StringRef Name) {      \
+    return llvm::StringSwitch<llvm::Optional<EnumName>>(Name)                  \
+        DefEnumCommand(EnumName, MAKE_RNAME_CASE)                              \
+            .Default(llvm::None);                                              \
+  }
+
+#define DEF_DECODE_MD_FUNC_BODY(EnumName, DefEnumCommand)                      \
+  llvm::Optional<EnumName> decode##EnumName##MD(const llvm::Metadata *MD) {    \
+    if (!MD) {                                                                 \
+      return llvm::None;                                                       \
+    }                                                                          \
+    if (auto *MDStr = llvm::dyn_cast<llvm::MDString>(MD)) {                    \
+      return get##EnumName##FromStr(MDStr->getString());                       \
+    }                                                                          \
+    if (auto *C = llvm::mdconst::dyn_extract<llvm::ConstantInt>(MD)) {         \
+      const auto Value = static_cast<EnumName>(C->getLimitedValue(~0ULL));     \
+      if (!get##EnumName##Name(Value).empty()) {                               \
+        return {Value};                                                        \
+      }                                                                        \
+    }                                                                          \
+    return llvm::None;                                                         \
   }
 
 // Use this for bitmasks that can take multiple values e.g. DontInline|Const
@@ -82,10 +121,14 @@
 #define GEN_ENUM_HEADER(EnumName)                                              \
   DEF_ENUM(EnumName, DEF_##EnumName)                                           \
   DEF_NAME_FUNC_HEADER(EnumName)                                               \
+  DEF_RNAME_FUNC_HEADER(EnumName)                                              \
+  DEF_DECODE_MD_FUNC_HEADER(EnumName)
 
 // Use this for enums that can only take a single value
 #define GEN_ENUM_IMPL(EnumName)                                                \
   DEF_NAME_FUNC_BODY(EnumName, DEF_##EnumName)                                 \
+  DEF_RNAME_FUNC_BODY(EnumName, DEF_##EnumName)                                \
+  DEF_DECODE_MD_FUNC_BODY(EnumName, DEF_##EnumName)
 
 // Use this for bitmasks that can take multiple values e.g. DontInline|Const
 #define GEN_MASK_ENUM_IMPL(EnumName)                                           \
@@ -884,5 +927,14 @@ GEN_ENUM_HEADER(KernelProfilingInfo)
 MemorySemantics getMemSemanticsForStorageClass(StorageClass sc);
 
 const char *getLinkStrForBuiltIn(BuiltIn builtIn);
+
+namespace kMD {
+const static char EntryPoint[] = "spirv.EntryPoint";
+const static char ExecutionMode[] = "spirv.ExecutionMode";
+const static char GlobalStorageClass[] = "spirv.StorageClass";
+const static char GlobalDecoration[] = "spirv.Decoration";
+const static char GlobalTypeSpec[] = "spirv.TypeSpec";
+const static char EntryExeModel[] = "spirv.ExecutionModel";
+} // namespace kMD
 
 #endif
