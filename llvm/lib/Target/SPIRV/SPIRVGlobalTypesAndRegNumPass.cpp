@@ -221,23 +221,39 @@ static unsigned int getMetadataUInt(MDNode *mdNode, unsigned int opIndex,
 
 // Add some initial header instructions such as OpSource and OpMemoryModel
 // TODO Maybe move the environment-specific logic used here elsewhere.
+// TODO Maybe use module metadata for the memory model settings?
 static void addHeaderOps(Module &M, MachineIRBuilder &MIRBuilder,
                          SPIRVRequirementHandler &reqs,
                          const SPIRVSubtarget &ST) {
   setMetaBlock(MIRBuilder, MB_MemoryModel);
   unsigned ptrSize = ST.getPointerSize();
 
+  const bool IsVk = ST.getTargetTriple().isVulkanEnvironment();
+
   // Add OpMemoryModel
   auto addr = ptrSize == 32 ? AddressingModel::Physical32
                             : ptrSize == 64 ? AddressingModel::Physical64
                                             : AddressingModel::Logical;
-  auto mem = (uint32_t)MemoryModel::OpenCL;
+  if (ST.HasPhysicalStorageBufferAddresses && IsVk &&
+      addr == AddressingModel::Physical64)
+  {
+    addr = AddressingModel::PhysicalStorageBuffer64;
+  }
+
+  MemoryModel mem = MemoryModel::Simple;
+  if (ST.HasVulkanMemoryModelKHR && IsVk) {
+    mem = MemoryModel::VulkanKHR;
+  } else if(ST.HasKernel) {
+    mem = MemoryModel::OpenCL;
+  } else if(ST.HasShader) {
+    mem = MemoryModel::GLSL450;
+  }
   MIRBuilder.buildInstr(SPIRV::OpMemoryModel)
       .addImm((uint32_t)addr)
-      .addImm(mem);
+      .addImm((uint32_t)mem);
 
   // Update required capabilities for this memory model
-  reqs.addRequirements(getMemoryModelRequirements(mem, ST));
+  reqs.addRequirements(getMemoryModelRequirements((uint32_t)mem, ST));
   reqs.addRequirements(getAddressingModelRequirements((uint32_t)addr, ST));
 
   // Get the OpenCL version number from metadata
