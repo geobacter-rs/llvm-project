@@ -60,6 +60,21 @@ static uint32_t getFunctionControl(const Function &F) {
   return funcControl;
 }
 
+static Optional<unsigned> decodeMDConstInt(const Metadata *MD,
+                                           unsigned Limit = ~0U) {
+  if (!MD) {
+    return None;
+  }
+
+  if (auto *C = mdconst::dyn_extract<ConstantInt>(MD)) {
+    const auto Value = C->getLimitedValue(~0ULL);
+    if (Value <= Limit) {
+      return {(unsigned)Value};
+    }
+  }
+  return None;
+}
+
 bool SPIRVCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs) const {
@@ -115,11 +130,96 @@ bool SPIRVCallLowering::lowerFormalArguments(
 
   // Handle entry points and function linkage
   if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
+    const auto &MF = MIRBuilder.getMF();
+    const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
     auto execModel = ExecutionModel::Kernel;
+    if (ST->getTargetTriple().isVulkanEnvironment()) {
+      execModel = ExecutionModel::GLCompute;
+    }
+
+    if (Metadata *MD = F.getMetadata(kMD::EntryExeModel)) {
+      if (auto* Tuple = dyn_cast<MDTuple>(MD)) {
+        if (Tuple->getNumOperands() >= 1) {
+          MD = &*Tuple->getOperand(0);
+        }
+      }
+      if (auto E = decodeExecutionModelMD(MD)) {
+        execModel = *E;
+      }
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm((uint32_t)execModel)
                    .addUse(funcVReg);
     addStringImm(F.getName(), MIB);
+
+    if (auto *MD = F.getMetadata(kMD::ExecutionMode)) {
+      for (auto &Operand : MD->operands()) {
+        const auto *Tuple = dyn_cast<MDNode>(&*Operand);
+        if (!Tuple) {
+          continue;
+        }
+
+        auto Operands = Tuple->operands();
+
+        const auto *Begin = Operands.begin();
+        auto Next = [&]() {
+          if (Begin != Operands.end()) {
+            return &**(Begin++);
+          } else {
+            return (Metadata *)nullptr;
+          }
+        };
+
+        auto EMode = decodeExecutionModeMD(Next());
+        if (!EMode) {
+          continue;
+        }
+
+        auto MI = MIRBuilder.buildInstr(SPIRV::OpExecutionMode)
+            .addUse(funcVReg)
+            .addImm((uint32_t)*EMode);
+
+        switch (*EMode) {
+        case ExecutionMode::Invocations: {
+          // requires an operand, but don't panic if not present (not our job).
+          if (auto O = decodeMDConstInt(Next())) {
+            MI.addImm(*O);
+          }
+          break;
+        }
+        case ExecutionMode::LocalSize:
+        case ExecutionMode::LocalSizeHint: {
+          unsigned X = 1, Y = 1, Z = 1;
+
+          if (auto Opt = decodeMDConstInt(Next())) {
+            X = *Opt;
+          }
+          if (auto Opt = decodeMDConstInt(Next())) {
+            Y = *Opt;
+          }
+          if (auto Opt = decodeMDConstInt(Next())) {
+            Z = *Opt;
+          }
+
+
+          MI.addImm(X).addImm(Y).addImm(Z);
+          break;
+        }
+        case ExecutionMode::VecTypeHint:
+        case ExecutionMode::SubgroupSize:
+        case ExecutionMode::SubgroupsPerWorkgroup: {
+          unsigned X = 1;
+          if (auto Opt = decodeMDConstInt(Next())) {
+            X = *Opt;
+          }
+          MI.addImm(X);
+          break;
+        }
+        default:
+          break;
+        }
+      }
+    }
   } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(funcVReg)
