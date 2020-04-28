@@ -271,7 +271,7 @@ static void addInstrRequirements(const MachineInstr &MI,
     if (ST.isKernel()) {
       reqs.addCapability(Capability::Addresses);
     } else {
-      reqs.addCapability(Capability::PhysicalStorageBufferAddressesEXT);
+      reqs.addCapability(Capability::PhysicalStorageBufferAddresses);
     }
     break;
   case SPIRV::OpSelect:
