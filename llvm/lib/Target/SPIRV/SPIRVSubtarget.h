@@ -61,6 +61,10 @@ private:
   const bool openCLFullProfile;
   const bool openCLImageSupport;
 
+  void updateCapabilitiesFromFeatures();
+  void enableFeatureCapability(const Capability Cap);
+  void enableFeatureCapabilities(const ArrayRef<Capability> Caps);
+
   // TODO Some of these fields might work without unique_ptr.
   //      But they are shared with other classes, so if the SPIRVSubtarget
   //      moves, not relying on unique_ptr breaks things.
@@ -94,6 +98,20 @@ protected:
   bool isDummyMode;
 
 public:
+#define MAKE_CAP_FEATURE_FIELDS(Enum, Var, Val, Caps, Exts, MinVer, MaxVer)    \
+  bool Has##Var : 1;
+#define DEF_CAP_FEATURES(EnumName, DefCommand)                                 \
+  DefCommand(EnumName, MAKE_CAP_FEATURE_FIELDS)
+
+  // TODO: Finish writing the tablegen feature defs.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-private-field"
+  DEF_CAP_FEATURES(Capability, DEF_Capability)
+#pragma GCC diagnostic pop
+
+#undef DEF_CAP_FEATURES
+#undef MAKE_CAP_FEATURE_FIELDS
+
   // This constructor initializes the data members to match that
   // of the specified triple.
   SPIRVSubtarget(const Triple &TT, const std::string &CPU,
