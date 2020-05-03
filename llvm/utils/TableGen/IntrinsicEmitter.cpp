@@ -220,7 +220,8 @@ enum IIT_Info {
   IIT_STRUCT7 = 39,
   IIT_STRUCT8 = 40,
   IIT_F128 = 41,
-  IIT_VEC_ELEMENT = 42
+  IIT_VEC_ELEMENT = 42,
+  IIT_V3 = 43,
 };
 
 static void EncodeFixedValueType(MVT::SimpleValueType VT,
@@ -343,6 +344,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     default: PrintFatalError("unhandled vector type width in intrinsic!");
     case 1: Sig.push_back(IIT_V1); break;
     case 2: Sig.push_back(IIT_V2); break;
+    case 3: Sig.push_back(IIT_V3); break;
     case 4: Sig.push_back(IIT_V4); break;
     case 8: Sig.push_back(IIT_V8); break;
     case 16: Sig.push_back(IIT_V16); break;
