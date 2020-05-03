@@ -152,6 +152,13 @@ private:
                      const MachineInstr &I, MachineIRBuilder &MIRBuilder,
                      const ExtInstList &extInsts) const;
 
+  bool selectInstructionIntrinsic(Register resVReg, const SPIRVType *resType,
+                                  const MachineInstr &I,
+                                  MachineIRBuilder &MIRBuilder) const;
+  bool selectBuiltinIntrinsic(Register resVReg, const SPIRVType *resType,
+                              const MachineInstr &I,
+                              MachineIRBuilder &MIRBuilder) const;
+
   Register buildI32Constant(uint32_t val, MachineIRBuilder &MIRBuilder) const;
 
   Register buildZerosVal(const SPIRVType *resType,
@@ -383,7 +390,11 @@ bool SPIRVInstructionSelector::spvSelect(Register resVReg,
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
     return selectExtInst(resVReg, resType, I, MIRBuilder, CL::clz);
-
+  case TargetOpcode::G_INTRINSIC:
+    if (selectInstructionIntrinsic(resVReg, resType, I, MIRBuilder)) {
+      return true;
+    }
+    return selectBuiltinIntrinsic(resVReg, resType, I, MIRBuilder);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return selectExtInst(resVReg, resType, I, MIRBuilder, CL::round, GL::Round);
   case TargetOpcode::G_INTRINSIC_TRUNC:
@@ -1321,6 +1332,112 @@ bool SPIRVInstructionSelector::selectPhi(Register resVReg,
     MIB.addMBB(I.getOperand(i + 1).getMBB());
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
+}
+bool SPIRVInstructionSelector::selectBuiltinIntrinsic(
+    Register resVReg, const SPIRVType *resType, const MachineInstr &I,
+    MachineIRBuilder &MIRBuilder) const {
+  unsigned IntrinsicID = I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
+  BuiltIn Id;
+  switch (IntrinsicID) {
+  case Intrinsic::spirv_base_instance:
+    Id = BuiltIn::BaseInstance;
+    break;
+  case Intrinsic::spirv_base_vertex:
+    Id = BuiltIn::BaseVertex;
+    break;
+  case Intrinsic::spirv_device_index:
+    Id = BuiltIn::DeviceIndex;
+    break;
+  case Intrinsic::spirv_draw_index:
+    Id = BuiltIn::DrawIndex;
+    break;
+  case Intrinsic::spirv_frag_coord:
+    Id = BuiltIn::FragCoord;
+    break;
+  case Intrinsic::spirv_global_invocation_id:
+    Id = BuiltIn::GlobalInvocationId;
+    break;
+  case Intrinsic::spirv_instance_id:
+    Id = BuiltIn::InstanceId;
+    break;
+  case Intrinsic::spirv_instance_index:
+    Id = BuiltIn::InstanceIndex;
+    break;
+  case Intrinsic::spirv_invocation_id:
+    Id = BuiltIn::InvocationId;
+    break;
+  case Intrinsic::spirv_local_invocation_id:
+    Id = BuiltIn::LocalInvocationId;
+    break;
+  case Intrinsic::spirv_local_invocation_index:
+    Id = BuiltIn::LocalInvocationIndex;
+    break;
+  case Intrinsic::spirv_num_subgroups:
+    Id = BuiltIn::NumSubgroups;
+    break;
+  case Intrinsic::spirv_subgroup_id:
+    Id = BuiltIn::SubgroupId;
+    break;
+  case Intrinsic::spirv_subgroup_local_invocation_id:
+    Id = BuiltIn::SubgroupLocalInvocationId;
+    break;
+  case Intrinsic::spirv_subgroup_size:
+    Id = BuiltIn::SubgroupSize;
+    break;
+  case Intrinsic::spirv_tess_coord:
+    Id = BuiltIn::TessCoord;
+    break;
+  case Intrinsic::spirv_vertex_index:
+    Id = BuiltIn::VertexIndex;
+    break;
+  case Intrinsic::spirv_view_index:
+    Id = BuiltIn::ViewIndex;
+    break;
+  case Intrinsic::spirv_num_workgroups:
+    Id = BuiltIn::NumWorkGroups;
+    break;
+  case Intrinsic::spirv_workgroup_id:
+    Id = BuiltIn::WorkgroupId;
+    break;
+  default:
+    return false;
+  }
+
+  // We build a new global variable each time one of the above is called.
+  // SPIRVGlobalTypesAndRegNum will deduplicate.
+  const auto MRI = MIRBuilder.getMRI();
+  auto BuiltinGlobal = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  auto BuiltinTy =
+      TR.getOpTypePointer(StorageClass::Input, resType, MIRBuilder);
+  MIRBuilder.buildInstr(SPIRV::OpVariable)
+      .addDef(BuiltinGlobal)
+      .addUse(TR.getSPIRVTypeID(BuiltinTy))
+      .addImm((uint32_t)StorageClass::Input)
+      .constrainAllUses(TII, TRI, RBI);
+  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+      .addUse(BuiltinGlobal)
+      .addImm((uint32_t)Decoration::BuiltIn)
+      .addImm((uint32_t)Id);
+
+  MIRBuilder.buildInstr(SPIRV::OpLoad)
+      .addDef(resVReg)
+      .addUse(TR.getSPIRVTypeID(resType))
+      .addImm((uint32_t)StorageClass::Input)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+bool SPIRVInstructionSelector::selectInstructionIntrinsic(
+    Register resVReg, const SPIRVType *resType, const MachineInstr &I,
+    MachineIRBuilder &MIRBuilder) const {
+  unsigned IntrinsicID = I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
+  switch (IntrinsicID) {
+  case Intrinsic::spirv_kill:
+    MIRBuilder.buildInstr(SPIRV::OpKill).constrainAllUses(TII, TRI, RBI);
+    return true;
+  default:
+    return false;
+  }
 }
 
 namespace llvm {
