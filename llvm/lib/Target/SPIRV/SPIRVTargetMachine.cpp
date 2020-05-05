@@ -54,6 +54,7 @@ extern "C" void LLVMInitializeSPIRVTarget() {
   initializeSPIRVBlockLabelerPass(PR);
   initializeSPIRVGlobalTypesAndRegNumPass(PR);
   initializeSPIRVAddRequirementsPass(PR);
+  initializeSPIRVLegalizeConstsPassPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -156,6 +157,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addISelPrepare() {
   TargetPassConfig::addISelPrepare();
   addPass(createSPIRVBasicBlockDominancePass());
+  addPass(createSPIRVLegalizeConstsPass());
 }
 
 // Add custom passes right before emitting asm/obj files. Global VReg numbering
