@@ -24,6 +24,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVIRTranslator.cpp
+  SPIRVLegalizeConsts.cpp SPIRVLegalizeConsts.h
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVOpenCLBIFs.cpp
