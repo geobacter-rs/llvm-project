@@ -21,6 +21,7 @@ class InstructionSelector;
 FunctionPass *createSPIRVBasicBlockDominancePass();
 FunctionPass *createSPIRVBlockLabelerPass();
 FunctionPass *createSPIRVAddRequirementsPass();
+FunctionPass *createSPIRVLegalizeConstsPass();
 ModulePass *createSPIRVGlobalTypesAndRegNumPass();
 
 InstructionSelector *
@@ -31,6 +32,7 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 void initializeSPIRVBasicBlockDominancePass(PassRegistry &);
 void initializeSPIRVBlockLabelerPass(PassRegistry &);
 void initializeSPIRVAddRequirementsPass(PassRegistry &);
+void initializeSPIRVLegalizeConstsPassPass(PassRegistry &);
 void initializeSPIRVGlobalTypesAndRegNumPass(PassRegistry &);
 } // namespace llvm
 
