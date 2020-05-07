@@ -10,6 +10,8 @@ tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(SPIRVCommonTableGen)
 
+set(LLVM_LINK_COMPONENTS SPIRVUtils SPIRVAsmPrinter)
+
 add_llvm_target(SPIRVCodeGen
   SPIRVAddRequirementsPass.cpp
   SPIRVAsmPrinter.cpp
@@ -17,9 +19,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVBlockLabeler.cpp
   SPIRVCallLowering.cpp
   SPIRVCapabilityUtils.cpp
-  SPIRVEnums.cpp
   SPIRVEnumRequirements.cpp
-  SPIRVExtInsts.cpp
   SPIRVGlobalTypesAndRegNumPass.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
@@ -28,6 +28,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVLegalizerInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVOpenCLBIFs.cpp
+  SPIRVPtrAnalysis.cpp SPIRVPtrAnalysis.h
   SPIRVRegisterBankInfo.cpp
   SPIRVRegisterInfo.cpp
   SPIRVStrings.cpp
@@ -36,6 +37,9 @@ add_llvm_target(SPIRVCodeGen
   SPIRVTypeRegistry.cpp
   )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Utils)
+
 add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(Utils)
