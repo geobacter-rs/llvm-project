@@ -72,7 +72,7 @@ private:
   std::unique_ptr<SPIRVCallLowering> CallLoweringInfo;
   std::unique_ptr<SPIRVRegisterBankInfo> RegBankInfo;
 
-  std::unordered_set<Extension::Extension> availableExtensions;
+  std::unordered_set<Extension> availableExtensions;
   std::unordered_set<ExtInstSet> availableExtInstSets;
   std::unordered_set<Capability> availableCaps;
 
@@ -134,8 +134,12 @@ public:
   uint32_t getTargetSPIRVVersion() const { return targetSPIRVVersion; };
 
   bool canUseCapability(Capability c) const;
-  bool canUseExtension(Extension::Extension e) const;
+  bool canUseExtension(Extension e) const;
   bool canUseExtInstSet(ExtInstSet e) const;
+
+  const std::unordered_set<Extension> &getAvailableExtensions() const {
+    return availableExtensions;
+  }
 
   SPIRVTypeRegistry *getSPIRVTypeRegistry() const { return TR.get(); }
 

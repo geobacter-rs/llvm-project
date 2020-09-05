@@ -56,43 +56,47 @@ def OpModuleProcessed: Op<330, (outs), (ins StringImm:$process, variable_ops),
                   "OpModuleProcessed $process">;
 
 //3.32.3 Annotation Instructions
+let hasSideEffects = 1 in {
+    def OpDecorate: Op<71, (outs), (ins ANY:$target, Decoration:$dec, variable_ops),
+                      "OpDecorate $target $dec">;
+    def OpMemberDecorate: Op<72, (outs), (ins TYPE:$t, i32imm:$m, Decoration:$d, variable_ops),
+                      "OpMemberDecorate $t $m $d">;
 
-def OpDecorate: Op<71, (outs), (ins ANY:$target, Decoration:$dec, variable_ops),
-                  "OpDecorate $target $dec">;
-def OpMemberDecorate: Op<72, (outs), (ins TYPE:$t, i32imm:$m, Decoration:$d, variable_ops),
-                  "OpMemberDecorate $t $m $d">;
+    // TODO Currently some deprecated opcodes are missing: OpDecorationGroup,
+    // OpGroupDecorate and OpGroupMemberDecorate
 
-// TODO Currently some deprecated opcodes are missing: OpDecorationGroup,
-// OpGroupDecorate and OpGroupMemberDecorate
-
-def OpDecorateId: Op<332, (outs), (ins ANY:$target, Decoration:$dec, variable_ops),
-                  "OpDecorateId $target $dec">;
-def OpDecorateString: Op<5632, (outs), (ins ANY:$t, Decoration:$d, StringImm:$s, variable_ops),
-                  "OpDecorateString $t $d $s">;
-def OpMemberDecorateString: Op<5633, (outs),
-                  (ins TYPE:$ty, i32imm:$mem, Decoration:$dec, StringImm:$str, variable_ops),
-                  "OpMemberDecorateString $ty $mem $dec $str">;
+    def OpDecorateId: Op<332, (outs), (ins ANY:$target, Decoration:$dec, variable_ops),
+                      "OpDecorateId $target $dec">;
+    def OpDecorateString: Op<5632, (outs), (ins ANY:$t, Decoration:$d, StringImm:$s, variable_ops),
+                      "OpDecorateString $t $d $s">;
+    def OpMemberDecorateString: Op<5633, (outs),
+                      (ins TYPE:$ty, i32imm:$mem, Decoration:$dec, StringImm:$str, variable_ops),
+                      "OpMemberDecorateString $ty $mem $dec $str">;
+}
 
 //3.32.4 Extension Instructions
 
-def OpExtension: Op<10, (outs), (ins StringImm:$name, variable_ops), "OpExtension $name">;
-def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variable_ops),
-                  "$res = OpExtInstImport $extInstsName">;
+let hasSideEffects = 1 in {
+    def OpExtension: Op<10, (outs), (ins StringImm:$name, variable_ops), "OpExtension $name">;
+    def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variable_ops),
+                      "$res = OpExtInstImport $extInstsName">;
+}
 def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, ID:$set, ExtInst:$inst, variable_ops),
                   "$res = OpExtInst $ty $set $inst">;
 
 //3.32.5 Mode-Setting Instructions
-
-def OpMemoryModel: Op<14, (outs), (ins AddressingModel:$addr, MemoryModel:$mem),
-                  "OpMemoryModel $addr $mem">;
-def OpEntryPoint: Op<15, (outs),
-                  (ins ExecutionModel:$model, ID:$entry, StringImm:$name, variable_ops),
-                  "OpEntryPoint $model $entry $name">;
-def OpExecutionMode: Op<16, (outs), (ins ID:$entry, ExecutionMode:$mode, variable_ops),
-                  "OpExecutionMode $entry $mode">;
-def OpCapability: Op<17, (outs), (ins Capability:$cap), "OpCapability $cap">;
-def OpExecutionModeId: Op<331, (outs), (ins ID:$entry, ExecutionMode:$mode, variable_ops),
-                  "OpExecutionModeId $entry $mode">;
+let hasSideEffects = 1 in {
+    def OpMemoryModel: Op<14, (outs), (ins AddressingModel:$addr, MemoryModel:$mem),
+                      "OpMemoryModel $addr $mem">;
+    def OpEntryPoint: Op<15, (outs),
+                      (ins ExecutionModel:$model, ID:$entry, StringImm:$name, variable_ops),
+                      "OpEntryPoint $model $entry $name">;
+    def OpExecutionMode: Op<16, (outs), (ins ID:$entry, ExecutionMode:$mode, variable_ops),
+                      "OpExecutionMode $entry $mode">;
+    def OpCapability: Op<17, (outs), (ins Capability:$cap), "OpCapability $cap">;
+    def OpExecutionModeId: Op<331, (outs), (ins ID:$entry, ExecutionMode:$mode, variable_ops),
+                      "OpExecutionModeId $entry $mode">;
+}
 
 //3.32.6 Type-Declaration Instructions
 
@@ -167,10 +171,12 @@ def OpVariable: Op<59, (outs ID:$res), (ins TYPE:$type, StorageClass:$sc, variab
 def OpImageTexelPointer: Op<60, (outs ID:$res),
                   (ins TYPE:$resType, ID:$image, ID:$coord, ID:$sample),
                   "$res = OpImageTexelPointer $resType $image $coord $sample">;
-def OpLoad: Op<61, (outs ID:$res), (ins TYPE:$resType, ID:$pointer, variable_ops),
-                  "$res = OpLoad $resType $pointer">;
-def OpStore: Op<62, (outs), (ins ID:$pointer, ID:$objectToStore, variable_ops),
-                  "OpStore $pointer $objectToStore">;
+let mayLoad = 1 in
+    def OpLoad: Op<61, (outs ID:$res), (ins TYPE:$resType, ID:$pointer, variable_ops),
+                      "$res = OpLoad $resType $pointer">;
+let mayStore = 1 in
+    def OpStore: Op<62, (outs), (ins ID:$pointer, ID:$objectToStore, variable_ops),
+                      "OpStore $pointer $objectToStore">;
 def OpCopyMemory: Op<63, (outs), (ins ID:$dest, ID:$src, variable_ops),
                   "OpCopyMemory $dest $src">;
 def OpCopyMemorySized: Op<64, (outs), (ins ID:$dest, ID:$src, ID:$size, variable_ops),
@@ -198,14 +204,15 @@ def OpPtrDiff: Op<403, (outs ID:$res), (ins TYPE:$resType, ID:$a, ID:$b),
                   "$res = OpPtrDiff $resType $a $b">;
 
 //3.32.9 Function Instructions
-
-def OpFunction: Op<54, (outs ID:$func),
-                  (ins TYPE:$resType, FunctionControl:$funcControl, TYPE:$funcType),
-                  "$func = OpFunction $resType $funcControl $funcType">;
-def OpFunctionParameter: Op<55, (outs ID:$arg), (ins TYPE:$type),
-                  "$arg = OpFunctionParameter $type">;
-def OpFunctionEnd: Op<56, (outs), (ins), "OpFunctionEnd"> {
-  let isTerminator=1;
+let hasSideEffects = 1 in {
+    def OpFunction: Op<54, (outs ID:$func),
+                      (ins TYPE:$resType, FunctionControl:$funcControl, TYPE:$funcType),
+                      "$func = OpFunction $resType $funcControl $funcType">;
+    def OpFunctionParameter: Op<55, (outs ID:$arg), (ins TYPE:$type),
+                      "$arg = OpFunctionParameter $type">;
+    def OpFunctionEnd: Op<56, (outs), (ins), "OpFunctionEnd"> {
+      let isTerminator=1;
+    }
 }
 def OpFunctionCall: Op<57, (outs ID:$res), (ins TYPE:$resType, ID:$function, variable_ops),
                   "$res = OpFunctionCall $resType $function">;
@@ -214,49 +221,52 @@ def OpFunctionCall: Op<57, (outs ID:$res), (ins TYPE:$resType, ID:$function, var
 
 def OpSampledImage: BinOp<"OpSampledImage", 86>;
 
-def OpImageSampleImplicitLod: Op<87, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
-                  "$res = OpImageSampleImplicitLod $type $sampledImage $coord">;
-def OpImageSampleExplicitLod: Op<88, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$sImage, ID:$uv, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSampleExplicitLod $ty $sImage $uv $op $i">;
+let mayLoad = 1 in {
+    def OpImageSampleImplicitLod: Op<87, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
+                      "$res = OpImageSampleImplicitLod $type $sampledImage $coord">;
+    def OpImageSampleExplicitLod: Op<88, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$sImage, ID:$uv, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSampleExplicitLod $ty $sImage $uv $op $i">;
 
-def OpImageSampleDrefImplicitLod: Op<89, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSampleDrefImplicitLod $type $sampledImage $dref $coord">;
-def OpImageSampleDrefExplicitLod: Op<90, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSampleDrefExplicitLod $ty $im $uv $d $op $i">;
+    def OpImageSampleDrefImplicitLod: Op<89, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageSampleDrefImplicitLod $type $sampledImage $dref $coord">;
+    def OpImageSampleDrefExplicitLod: Op<90, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSampleDrefExplicitLod $ty $im $uv $d $op $i">;
 
-def OpImageSampleProjImplicitLod: Op<91, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
-                  "$res = OpImageSampleProjImplicitLod $type $sampledImage $coord">;
-def OpImageSampleProjExplicitLod: Op<92, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSampleProjExplicitLod $ty $im $uv $op $i">;
+    def OpImageSampleProjImplicitLod: Op<91, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
+                      "$res = OpImageSampleProjImplicitLod $type $sampledImage $coord">;
+    def OpImageSampleProjExplicitLod: Op<92, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSampleProjExplicitLod $ty $im $uv $op $i">;
 
-def OpImageSampleProjDrefImplicitLod: Op<93, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSampleProjDrefImplicitLod $type $sampledImage $dref $coord">;
-def OpImageSampleProjDrefExplicitLod: Op<94, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
+    def OpImageSampleProjDrefImplicitLod: Op<93, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageSampleProjDrefImplicitLod $type $sampledImage $dref $coord">;
+    def OpImageSampleProjDrefExplicitLod: Op<94, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
 
-def OpImageFetch: Op<95, (outs ID:$res),
-                  (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
-                  "$res = OpImageFetch $type $image $coord">;
-def OpImageGather: Op<96, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$component, variable_ops),
-                  "$res = OpImageGather $type $sampledImage $coord $component">;
-def OpImageDrefGather: Op<97, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageDrefGather $type $sampledImage $coord $dref">;
+    def OpImageFetch: Op<95, (outs ID:$res),
+                      (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
+                      "$res = OpImageFetch $type $image $coord">;
+    def OpImageGather: Op<96, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$component, variable_ops),
+                      "$res = OpImageGather $type $sampledImage $coord $component">;
+    def OpImageDrefGather: Op<97, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageDrefGather $type $sampledImage $coord $dref">;
 
-def OpImageRead: Op<98, (outs ID:$res),
-                  (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
-                  "$res = OpImageRead $type $image $coord">;
-def OpImageWrite: Op<99, (outs), (ins ID:$image, ID:$coord, ID:$texel, variable_ops),
-                  "OpImageWrite $image $coord $texel">;
+    def OpImageRead: Op<98, (outs ID:$res),
+                      (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
+                      "$res = OpImageRead $type $image $coord">;
+}
+let mayStore = 1 in
+    def OpImageWrite: Op<99, (outs), (ins ID:$image, ID:$coord, ID:$texel, variable_ops),
+                      "OpImageWrite $image $coord $texel">;
 
 def OpImage: UnOp<"OpImage", 100>;
 def OpImageQueryFormat: UnOp<"OpImageQueryFormat", 101>;
@@ -267,54 +277,55 @@ def OpImageQueryLod: BinOp<"OpImageQueryLod", 105>;
 def OpImageQueryLevels: UnOp<"OpImageQueryLevels", 106>;
 def OpImageQuerySamples: UnOp<"OpImageQuerySamples", 107>;
 
+let mayLoad = 1 in {
+    def OpImageSparseSampleImplicitLod: Op<305, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
+                      "$res = OpImageSparseSampleImplicitLod $type $sampledImage $coord">;
+    def OpImageSparseSampleExplicitLod: Op<306, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$sImage, ID:$uv, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSparseSampleExplicitLod $ty $sImage $uv $op $i">;
 
-def OpImageSparseSampleImplicitLod: Op<305, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
-                  "$res = OpImageSparseSampleImplicitLod $type $sampledImage $coord">;
-def OpImageSparseSampleExplicitLod: Op<306, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$sImage, ID:$uv, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSparseSampleExplicitLod $ty $sImage $uv $op $i">;
+    def OpImageSparseSampleDrefImplicitLod: Op<307, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImg, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageSparseSampleDrefImplicitLod $type $sampledImg $dref $coord">;
+    def OpImageSparseSampleDrefExplicitLod: Op<308, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSparseSampleDrefExplicitLod $ty $im $uv $d $op $i">;
 
-def OpImageSparseSampleDrefImplicitLod: Op<307, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImg, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSparseSampleDrefImplicitLod $type $sampledImg $dref $coord">;
-def OpImageSparseSampleDrefExplicitLod: Op<308, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSparseSampleDrefExplicitLod $ty $im $uv $d $op $i">;
+    def OpImageSparseSampleProjImplicitLod: Op<309, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
+                      "$res = OpImageSparseSampleProjImplicitLod $type $sampledImage $coord">;
+    def OpImageSparseSampleProjExplicitLod: Op<310, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSparseSampleProjExplicitLod $ty $im $uv $op $i">;
 
-def OpImageSparseSampleProjImplicitLod: Op<309, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, variable_ops),
-                  "$res = OpImageSparseSampleProjImplicitLod $type $sampledImage $coord">;
-def OpImageSparseSampleProjExplicitLod: Op<310, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSparseSampleProjExplicitLod $ty $im $uv $op $i">;
+    def OpImageSparseSampleProjDrefImplicitLod: Op<311, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sImage, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageSparseSampleProjDrefImplicitLod $type $sImage $dref $coord">;
+    def OpImageSparseSampleProjDrefExplicitLod: Op<312, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
+                      "$res = OpImageSparseSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
 
-def OpImageSparseSampleProjDrefImplicitLod: Op<311, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSparseSampleProjDrefImplicitLod $type $sImage $dref $coord">;
-def OpImageSparseSampleProjDrefExplicitLod: Op<312, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$im, ID:$uv, ID:$d, ImageOperand:$op, ID:$i, variable_ops),
-                  "$res = OpImageSparseSampleProjDrefExplicitLod $ty $im $uv $d $op $i">;
+    def OpImageSparseFetch: Op<313, (outs ID:$res),
+                      (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
+                      "$res = OpImageSparseFetch $type $image $coord">;
+    def OpImageSparseGather: Op<314, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$component, variable_ops),
+                      "$res = OpImageSparseGather $type $sampledImage $coord $component">;
+    def OpImageSparseDrefGather: Op<315, (outs ID:$res),
+                      (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
+                      "$res = OpImageSparseDrefGather $type $sampledImage $coord $dref">;
 
-def OpImageSparseFetch: Op<313, (outs ID:$res),
-                  (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
-                  "$res = OpImageSparseFetch $type $image $coord">;
-def OpImageSparseGather: Op<314, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$component, variable_ops),
-                  "$res = OpImageSparseGather $type $sampledImage $coord $component">;
-def OpImageSparseDrefGather: Op<315, (outs ID:$res),
-                  (ins TYPE:$type, ID:$sampledImage, ID:$coord, ID:$dref, variable_ops),
-                  "$res = OpImageSparseDrefGather $type $sampledImage $coord $dref">;
+    def OpImageSparseTexelsResident: UnOp<"OpImageSparseTexelsResident", 316>;
 
-def OpImageSparseTexelsResident: UnOp<"OpImageSparseTexelsResident", 316>;
+    def OpImageSparseRead: Op<320, (outs ID:$res),
+                      (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
+                      "$res = OpImageSparseRead $type $image $coord">;
 
-def OpImageSparseRead: Op<320, (outs ID:$res),
-                  (ins TYPE:$type, ID:$image, ID:$coord, variable_ops),
-                  "$res = OpImageSparseRead $type $image $coord">;
-
-def OpImageSampleFootprintNV: Op<5283, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$sImg, ID:$uv, ID:$granularity, ID:$coarse, variable_ops),
-                  "$res = OpImageSampleFootprintNV $ty $sImg $uv $granularity $coarse">;
+    def OpImageSampleFootprintNV: Op<5283, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$sImg, ID:$uv, ID:$granularity, ID:$coarse, variable_ops),
+                      "$res = OpImageSampleFootprintNV $ty $sImg $uv $granularity $coarse">;
+}
 
 //3.32.11 Conversion instructions
 
@@ -492,10 +503,13 @@ def OpFwidthCoarse: UnOp<"OpFwidthCoarse", 215>;
 
 def OpPhi: Op<245, (outs ID:$res), (ins TYPE:$type, ID:$var0, ID:$block0, variable_ops),
                   "$res = OpPhi $type $var0 $block0">;
-def OpLoopMerge: Op<246, (outs), (ins ID:$merge, ID:$continue, LoopControl:$lc, variable_ops),
-                  "OpLoopMerge $merge $merge $continue $lc">;
-def OpSelectionMerge: Op<247, (outs), (ins ID:$merge, SelectionControl:$sc),
-                  "OpSelectionMerge $merge $sc">;
+let hasSideEffects = 1 in {
+    def OpLoopMerge: Op<246, (outs), (ins ID:$merge, ID:$continue, LoopControl:$lc, variable_ops),
+                      "OpLoopMerge $merge $merge $continue $lc">;
+    def OpSelectionMerge: Op<247, (outs), (ins ID:$merge, SelectionControl:$sc),
+                      "OpSelectionMerge $merge $sc">;
+}
+
 def OpLabel: Op<248, (outs ID:$label), (ins), "$label = OpLabel">;
 let isTerminator=1 in {
 def OpBranch: Op<249, (outs), (ins ID:$label), "OpBranch $label">;
@@ -522,38 +536,41 @@ class AtomicOpVal<string name, bits<16> opCode>: Op<opCode, (outs ID:$res),
                   (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$sem, ID:$val),
                   "$res = "#name#" $ty $ptr $sc $sem $val">;
 
-def OpAtomicLoad: AtomicOp<"OpAtomicLoad", 227>;
+let mayLoad = 1 in
+    def OpAtomicLoad: AtomicOp<"OpAtomicLoad", 227>;
 
-def OpAtomicStore: Op<228, (outs), (ins ID:$ptr, ID:$sc, ID:$sem, ID:$val),
-                  "OpStore $ptr $sc $sem $val">;
-def OpAtomicExchange: Op<229, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$sem, ID:$val),
-                  "$res = OpAtomicExchange $ty $ptr $sc $sem $val">;
-def OpAtomicCompareExchange: Op<230, (outs ID:$res),
-                  (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$eq,
-                   ID:$neq, ID:$val, ID:$cmp),
-                  "$res = OpAtomicCompareExchange $ty $ptr $sc $eq $neq $val $cmp">;
-// TODO Currently the following deprecated opcode is missing: OpAtomicCompareExchangeWeak
+let mayStore = 1 in
+    def OpAtomicStore: Op<228, (outs), (ins ID:$ptr, ID:$sc, ID:$sem, ID:$val),
+                      "OpStore $ptr $sc $sem $val">;
+let mayLoad = 1, mayStore = 1 in {
+    def OpAtomicExchange: Op<229, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$sem, ID:$val),
+                      "$res = OpAtomicExchange $ty $ptr $sc $sem $val">;
+    def OpAtomicCompareExchange: Op<230, (outs ID:$res),
+                      (ins TYPE:$ty, ID:$ptr, ID:$sc, ID:$eq,
+                       ID:$neq, ID:$val, ID:$cmp),
+                      "$res = OpAtomicCompareExchange $ty $ptr $sc $eq $neq $val $cmp">;
+    // TODO Currently the following deprecated opcode is missing: OpAtomicCompareExchangeWeak
 
-def OpAtomicIIncrement: AtomicOp<"OpAtomicIIncrement", 232>;
-def OpAtomicIDecrement: AtomicOp<"OpAtomicIDecrement", 233>;
+    def OpAtomicIIncrement: AtomicOp<"OpAtomicIIncrement", 232>;
+    def OpAtomicIDecrement: AtomicOp<"OpAtomicIDecrement", 233>;
 
-def OpAtomicIAdd: AtomicOpVal<"OpAtomicIAdd", 234>;
-def OpAtomicISub: AtomicOpVal<"OpAtomicISub", 235>;
+    def OpAtomicIAdd: AtomicOpVal<"OpAtomicIAdd", 234>;
+    def OpAtomicISub: AtomicOpVal<"OpAtomicISub", 235>;
 
-def OpAtomicSMin: AtomicOpVal<"OpAtomicSMin", 236>;
-def OpAtomicUMin: AtomicOpVal<"OpAtomicUMin", 237>;
-def OpAtomicSMax: AtomicOpVal<"OpAtomicSMax", 238>;
-def OpAtomicUMax: AtomicOpVal<"OpAtomicUMax", 239>;
+    def OpAtomicSMin: AtomicOpVal<"OpAtomicSMin", 236>;
+    def OpAtomicUMin: AtomicOpVal<"OpAtomicUMin", 237>;
+    def OpAtomicSMax: AtomicOpVal<"OpAtomicSMax", 238>;
+    def OpAtomicUMax: AtomicOpVal<"OpAtomicUMax", 239>;
 
-def OpAtomicAnd: AtomicOpVal<"OpAtomicAnd", 240>;
-def OpAtomicOr: AtomicOpVal<"OpAtomicOr", 241>;
-def OpAtomicXor: AtomicOpVal<"OpAtomicXor", 242>;
+    def OpAtomicAnd: AtomicOpVal<"OpAtomicAnd", 240>;
+    def OpAtomicOr: AtomicOpVal<"OpAtomicOr", 241>;
+    def OpAtomicXor: AtomicOpVal<"OpAtomicXor", 242>;
 
-
-def OpAtomicFlagTestAndSet: AtomicOp<"OpAtomicFlagTestAndSet", 318>;
-def OpAtomicFlagClear: Op<319, (outs), (ins ID:$ptr, ID:$sc, ID:$sem),
-                  "OpAtomicFlagClear $ptr $sc $sem">;
+    def OpAtomicFlagTestAndSet: AtomicOp<"OpAtomicFlagTestAndSet", 318>;
+    def OpAtomicFlagClear: Op<319, (outs), (ins ID:$ptr, ID:$sc, ID:$sem),
+                      "OpAtomicFlagClear $ptr $sc $sem">;
+}
 
 //3.32.19 Primitive Instructions
 
@@ -564,13 +581,16 @@ def OpEndStreamPrimitive: Op<221, (outs), (ins ID:$stream), "OpEndStreamPrimitiv
 
 //3.32.20 Barrier Instructions
 
-def OpControlBarrier: Op<224, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
-                  "OpControlBarrier $exec $mem $sem">;
-def OpMemoryBarrier: Op<225, (outs), (ins ID:$mem, ID:$sem),
-                  "OpMemoryBarrier $mem $sem">;
-def OpNamedBarrierInitialize: UnOp<"OpNamedBarrierInitialize", 328>;
-def OpMemoryNamedBarrier: Op<329, (outs), (ins ID:$barr, ID:$mem, ID:$sem),
-                  "OpMemoryNamedBarrier $barr $mem $sem">;
+let hasSideEffects = 1 in {
+    def OpControlBarrier: Op<224, (outs), (ins ID:$exec, ID:$mem, ID:$sem),
+                      "OpControlBarrier $exec $mem $sem">;
+    def OpMemoryBarrier: Op<225, (outs), (ins ID:$mem, ID:$sem),
+                      "OpMemoryBarrier $mem $sem">;
+    let mayStore = 1 in
+        def OpNamedBarrierInitialize: UnOp<"OpNamedBarrierInitialize", 328>;
+    def OpMemoryNamedBarrier: Op<329, (outs), (ins ID:$barr, ID:$mem, ID:$sem),
+                      "OpMemoryNamedBarrier $barr $mem $sem">;
+}
 
 // TODO Complete this list, or auto-generate it, to include later sections such as
 // 3.32.21. Group and Subgroup Instructions,

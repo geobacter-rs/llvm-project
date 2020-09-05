@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVIRTRANSLATOR_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVIRTRANSLATOR_H
 
+#include "SPIRVPtrAnalysis.h"
 #include "SPIRVTypeRegistry.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 
@@ -24,10 +25,15 @@ class SPIRVIRTranslator : public IRTranslator {
 private:
   // Use to insert and keep track of SPIR-V type data
   SPIRVTypeRegistry *TR;
+  const SPIRVSubtarget* ST;
+  Optional<SPIRVPtrAnalysis> PtrAnalysis;
+
+  unsigned PipelineBindingMDKindID = 0;
+  unsigned PipelineDescSetMDKindID = 0;
 
   // Generate OpVariables with linkage data and their initializers if necessary
-  bool buildGlobalValue(Register Reg, const GlobalValue *GV,
-                        MachineIRBuilder &MIRBuilder);
+  bool buildGlobalVariable(Register Reg, const GlobalVariable *GV,
+                           MachineIRBuilder &MIRBuilder);
 
 protected:
   // Whenever a VReg gets created, it needs type info, and also name debug info

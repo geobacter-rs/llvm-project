@@ -63,9 +63,17 @@ def FeatureLiteralSampler : CapabilityFeature<"LiteralSampler", "literal-sampler
 def FeatureAtomicStorage : CapabilityFeature<"AtomicStorage", "atomic-storage", 21, [FeatureShader]>;
 def FeatureInt16 : CapabilityFeature<"Int16", "i16", 22>;
 def FeatureInt8 : CapabilityFeature<"Int8", "i8", 39>;
+def FeatureStorageBuffer16BitAccess : CapabilityFeature<"StorageBuffer16BitAccess", "storage-buffer-i16-access", 4433>;
+def FeatureStorageUniform16BitAccess : CapabilityFeature<"StorageUniform16BitAccess",
+  "storage-uniform-i16-access", 4434, [FeatureStorageBuffer16BitAccess]>;
+def FeatureStorageInputOutput16BitAccess : CapabilityFeature<"StorageInputOutput16BitAccess",
+  "storage-input-output-i16-access", 4436>;
 def FeatureVariablePointersStorageBuffer :
   CapabilityFeature<"VariablePointersStorageBuffer", "variable-pointers-storage-buffer", 4441>;
 def FeatureVariablePointers : CapabilityFeature<"VariablePointers", "variable-pointers", 4442>;
+def FeatureStorageBuffer8BitAccess : CapabilityFeature<"StorageBuffer8BitAccess", "storage-buffer-i8-access", 4448>;
+def FeatureStorageUniform8BitAccess : CapabilityFeature<"StorageUniform8BitAccess",
+  "storage-uniform-i8-access", 4449, [FeatureStorageBuffer8BitAccess]>;
 def FeatureVulkanMemoryModelKHR : CapabilityFeature<"VulkanMemoryModelKHR", "vulkan-memory-model", 5345>;
 def FeatureVulkanMemoryModelDeviceScopeKHR :
   CapabilityFeature<"VulkanMemoryModelDeviceScopeKHR", "vulkan-memory-model-device-scope", 5346>;

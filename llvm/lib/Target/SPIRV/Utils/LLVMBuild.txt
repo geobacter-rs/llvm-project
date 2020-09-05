@@ -1,4 +1,4 @@
-;===- ./lib/Target/SPIRV/LLVMBuild.txt -------------------------*- Conf -*--===;
+;===- ./lib/Target/SPIRV/Utils/LLVMBuild.txt -------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,33 +14,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = InstPrinter MCTargetDesc TargetInfo Utils
-
 [component_0]
-type = TargetGroup
-name = SPIRV
-parent = Target
-has_asmprinter = 1
-has_disassembler = 1
-
-[component_1]
 type = Library
-name = SPIRVCodeGen
+name = SPIRVUtils
 parent = SPIRV
-required_libraries =
- AsmPrinter
- Analysis
- CodeGen
- Core
- MC
- SPIRVAsmPrinter
- SPIRVDesc
- SPIRVInfo
- SPIRVUtils
- SelectionDAG
- Support
- Target
- GlobalISel
- Demangle
+required_libraries = Core Support
 add_to_library_groups = SPIRV

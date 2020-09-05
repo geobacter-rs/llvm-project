@@ -25,13 +25,13 @@ class SPIRVRequirements {
 public:
   const bool isSatisfiable;
   const llvm::Optional<Capability> cap;
-  const std::vector<Extension::Extension> exts;
+  const std::vector<Extension> exts;
   const uint32_t minVer; // 0 if no min version is required
   const uint32_t maxVer; // 0 if no max version is required
 
   SPIRVRequirements(bool isSatisfiable = false,
                     llvm::Optional<Capability> cap = {},
-                    std::vector<Extension::Extension> exts = {},
+                    std::vector<Extension> exts = {},
                     uint32_t minVer = 0, uint32_t maxVer = 0)
       : isSatisfiable(isSatisfiable), cap(cap), exts(exts), minVer(minVer),
         maxVer(maxVer) {}
@@ -42,7 +42,7 @@ public:
   const std::vector<Capability> get##EnumName##Capabilities(EnumName e);
 
 #define DEF_EXTENSION_FUNC_HEADER(EnumName)                                    \
-  const std::vector<Extension::Extension> get##EnumName##Extensions(EnumName e);
+  const std::vector<Extension> get##EnumName##Extensions(EnumName e);
 
 #define DEF_MIN_VERSION_FUNC_HEADER(EnumName)                                  \
   uint32_t get##EnumName##MinVersion(EnumName e);

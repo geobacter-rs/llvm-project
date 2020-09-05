@@ -25,13 +25,13 @@
 #include <vector>
 
 using CapabilityList = std::vector<Capability>;
-using ExtensionList = std::vector<Extension::Extension>;
+using ExtensionList = std::vector<Extension>;
 
 class SPIRVRequirementHandler {
 private:
   CapabilityList minimalCaps;
   std::set<Capability> allCaps;
-  std::set<Extension::Extension> allExtensions;
+  std::set<Extension> allExtensions;
   uint32_t minVersion = 0; // 0 if no min version is defined
   uint32_t maxVersion = 0; // 0 if no max version is defined
 
@@ -41,7 +41,7 @@ public:
   uint32_t getMinVersion() const { return minVersion; }
   uint32_t getMaxVersion() const { return maxVersion; }
   const CapabilityList &getMinimalCapabilities() const { return minimalCaps; };
-  const std::set<Extension::Extension> &getExtensions() const {
+  const std::set<Extension> &getExtensions() const {
     return allExtensions;
   };
 
@@ -51,7 +51,7 @@ public:
   void addCapabilities(const CapabilityList &toAdd);
   void addCapability(Capability toAdd);
   void addExtensions(const ExtensionList &toAdd);
-  void addExtension(Extension::Extension toAdd);
+  void addExtension(Extension toAdd);
 
   // Add the given requirements to the lists. If constraints conflict, or these
   // requirements cannot be satisfied, then abort the compilation.
