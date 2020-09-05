@@ -14,69 +14,69 @@ let TargetPrefix = "spirv" in {
   // Readonly builtins, to present a familiar interface to frontends.
   def int_spirv_local_invocation_id :
     Intrinsic<[llvm_v3i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_local_invocation_id">;
+    GCCBuiltin<"__builtin_spirv_local_invocation_id">;
   def int_spirv_local_invocation_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_local_invocation_index">;
+    GCCBuiltin<"__builtin_spirv_local_invocation_index">;
   // GlobalInvocationId
   def int_spirv_global_invocation_id :
     Intrinsic<[llvm_v3i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_global_invocation_id">;
+    GCCBuiltin<"__builtin_spirv_global_invocation_id">;
   def int_spirv_instance_id :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_instance_id">;
+    GCCBuiltin<"__builtin_spirv_instance_id">;
   def int_spirv_invocation_id :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_invocation_id">;
+    GCCBuiltin<"__builtin_spirv_invocation_id">;
   def int_spirv_instance_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_instance_index">;
+    GCCBuiltin<"__builtin_spirv_instance_index">;
   def int_spirv_base_instance :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_base_instance">;
+    GCCBuiltin<"__builtin_spirv_base_instance">;
   def int_spirv_base_vertex :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_base_vertex">;
+    GCCBuiltin<"__builtin_spirv_base_vertex">;
   def int_spirv_device_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_device_index">;
+    GCCBuiltin<"__builtin_spirv_device_index">;
   def int_spirv_draw_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_draw_index">;
+    GCCBuiltin<"__builtin_spirv_draw_index">;
   def int_spirv_frag_coord :
     Intrinsic<[llvm_v4f32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_frag_coord">;
+    GCCBuiltin<"__builtin_spirv_frag_coord">;
   def int_spirv_num_subgroups :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_num_subgroups">;
+    GCCBuiltin<"__builtin_spirv_num_subgroups">;
   def int_spirv_subgroup_id :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_subgroup_id">;
+    GCCBuiltin<"__builtin_spirv_subgroup_id">;
   def int_spirv_subgroup_local_invocation_id :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_subgroup_local_invocation_id">;
+    GCCBuiltin<"__builtin_spirv_subgroup_local_invocation_id">;
   def int_spirv_subgroup_size :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_subgroup_size">;
+    GCCBuiltin<"__builtin_spirv_subgroup_size">;
   def int_spirv_num_workgroups :
     Intrinsic<[llvm_v3i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_num_workgroups">;
+    GCCBuiltin<"__builtin_spirv_num_workgroups">;
   def int_spirv_workgroup_id :
     Intrinsic<[llvm_v3i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_workgroup_id">;
+    GCCBuiltin<"__builtin_spirv_workgroup_id">;
   def int_spirv_tess_coord :
     Intrinsic<[llvm_v3f32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_tess_coord">;
+    GCCBuiltin<"__builtin_spirv_tess_coord">;
   def int_spirv_vertex_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_vertex_index">;
+    GCCBuiltin<"__builtin_spirv_vertex_index">;
   def int_spirv_view_index :
     Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
-    GCCBuiltin<"__buildin_spirv_view_index">;
+    GCCBuiltin<"__builtin_spirv_view_index">;
 
   // Instructions
   // discard for frag shaders
   def int_spirv_kill :
     Intrinsic<[], [], [IntrNoMem, IntrNoReturn]>,
-    GCCBuiltin<"__buildin_spirv_kill">;
+    GCCBuiltin<"__builtin_spirv_kill">;
 }
