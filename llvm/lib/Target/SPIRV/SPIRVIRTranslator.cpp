@@ -18,6 +18,7 @@
 #include "SPIRV.h"
 #include "SPIRVStrings.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVMetadata.h"
 
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Attributes.h"
@@ -25,6 +26,7 @@
 #include "llvm/Target/TargetIntrinsicInfo.h"
 
 using namespace llvm;
+using namespace SPIRV;
 
 static bool buildOpConstantNull(const Constant &C, Register Reg,
                                 MachineIRBuilder &MIRBuilder,
@@ -66,36 +68,39 @@ static bool buildOpConstantComposite(const Constant &C, Register Reg,
   return TR->constrainRegOperands(MIB);
 }
 
-bool SPIRVIRTranslator::buildGlobalValue(Register Reg, const GlobalValue *GV,
-                                         MachineIRBuilder &MIRBuilder) {
-  SPIRVType *resType = TR->getOrCreateSPIRVType(GV->getType(), *EntryBuilder);
-
-  auto globalIdent = GV->getGlobalIdentifier();
-  auto globalVar = GV->getParent()->getGlobalVariable(globalIdent);
+bool SPIRVIRTranslator::buildGlobalVariable(Register Reg,
+                                            const GlobalVariable *GV,
+                                            MachineIRBuilder &MIRBuilder) {
+  SPIRVType *resType = TR->getOrCreateSPIRVType(GV, *EntryBuilder);
 
   Register initVReg = 0;
-  if (globalVar->hasInitializer()) {
-    Constant *InitVal = globalVar->getInitializer();
-    initVReg = getOrCreateVReg(*InitVal);
+  if (GV->hasInitializer()) {
+    initVReg = getOrCreateVReg(*GV->getInitializer());
   }
 
   auto addrSpace = GV->getAddressSpace();
   auto storage = TR->addressSpaceToStorageClass(addrSpace);
-
-  if (GV->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage &&
-      storage != StorageClass::Function) {
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
-                   .addUse(Reg)
-                   .addImm((uint32_t)Decoration::LinkageAttributes);
-    addStringImm(globalIdent, MIB);
-    MIB.addImm((uint32_t)LinkageType::Export);
+  if (ST->HasLinkage) {
+    if (GV->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage &&
+        storage != StorageClass::Function) {
+      auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
+                     .addUse(Reg)
+                     .addImm((uint32_t)Decoration::LinkageAttributes);
+      addStringImm(GV->getName(), MIB);
+      MIB.addImm((uint32_t)LinkageType::Export);
+    }
   }
 
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpVariable)
                  .addDef(Reg)
                  .addUse(TR->getSPIRVTypeID(resType))
                  .addImm((uint32_t)storage);
-  if (initVReg != 0) {
+  // XXX This is useless because the OpName instructions aren't used, and
+  // thus are deleted. But at the same time, marking OpName as having side
+  // effects is also not workable as then dead globals won't be eliminated.
+  buildOpName(Reg, GV->getName(), MIRBuilder);
+
+  if (initVReg != 0 && storage != StorageClass::Input) {
     MIB.addUse(initVReg);
     // TODO should this check be here?
     // using namespace StorageClass;
@@ -107,6 +112,20 @@ bool SPIRVIRTranslator::buildGlobalValue(Register Reg, const GlobalValue *GV,
     //   return false;
     // }
   }
+
+  auto Decorate = [&](unsigned MDKindId, Decoration Dec) {
+    if(auto* MD = GV->getMetadata(MDKindId)) {
+      if(auto Id = decodeMDConstInt(MD)) {
+        MIRBuilder.buildInstr(SPIRV::OpDecorate)
+            .addDef(Reg)
+            .addImm((uint32_t)Dec)
+            .addImm(*Id);
+      }
+    }
+  };
+  Decorate(PipelineBindingMDKindID, Decoration::Binding);
+  Decorate(PipelineDescSetMDKindID, Decoration::DescriptorSet);
+
   return TR->constrainRegOperands(MIB);
 }
 
@@ -114,9 +133,9 @@ bool SPIRVIRTranslator::translate(const Constant &C, Register Reg) {
   if (isa<ConstantPointerNull>(C) || isa<ConstantAggregateZero>(C)) {
     // Null (needs handled here to not loose the type info)
     return buildOpConstantNull(C, Reg, *EntryBuilder, TR);
-  } else if (auto GV = dyn_cast<GlobalValue>(&C)) {
+  } else if (auto GV = dyn_cast<GlobalVariable>(&C)) {
     // Global OpVariables (possibly with constant initializers)
-    return buildGlobalValue(Reg, GV, *EntryBuilder);
+    return buildGlobalVariable(Reg, GV, *EntryBuilder);
   } else if (auto CV = dyn_cast<ConstantDataSequential>(&C)) {
     // Vectors or arrays via OpConstantComposite
     if (CV->getNumElements() == 1)
@@ -150,9 +169,6 @@ bool SPIRVIRTranslator::translateBitCast(const User &U,
 ArrayRef<Register> SPIRVIRTranslator::getOrCreateVRegs(const Value &Val) {
   Type *Ty = Val.getType();
 
-  // Ensure type definition appears before uses. This is especially important
-  // for values like OpConstant which get hoisted alongside types later
-  TR->getOrCreateSPIRVType(Ty, *EntryBuilder);
   const auto MRI = EntryBuilder->getMRI();
 
   ArrayRef<Register> ResVRegs;
@@ -164,6 +180,17 @@ ArrayRef<Register> SPIRVIRTranslator::getOrCreateVRegs(const Value &Val) {
     ResVRegs = *VMap.getVRegs(Val);
   } else {
     assert(Ty->isSized() && "Cannot create unsized vreg");
+
+    // Ensure type definition appears before uses. This is especially important
+    // for values like OpConstant which get hoisted alongside types later
+    SPIRVType *SPIRVTy = nullptr;
+    if (auto *GV = dyn_cast<GlobalVariable>(&Val)) {
+      SPIRVTy = PtrAnalysis->visitGlobal(GV, EntryBuilder.get());
+    }
+
+    if (!SPIRVTy) {
+      SPIRVTy = TR->getOrCreateSPIRVType(&Val, *EntryBuilder);
+    }
 
     // Create entry for this type.
     auto *NewVRegs = VMap.getVRegs(Val);
@@ -179,7 +206,7 @@ ArrayRef<Register> SPIRVIRTranslator::getOrCreateVRegs(const Value &Val) {
 
     // Add type and name metadata
     if (!TR->hasSPIRVTypeForVReg(ResVRegs[0])) {
-      TR->assignTypeToVReg(Ty, ResVRegs[0], *EntryBuilder);
+      TR->assignSPIRVTypeToVReg(SPIRVTy, ResVRegs[0], *EntryBuilder);
       if (Val.hasName()) {
         buildOpName(ResVRegs[0], Val.getName(), *EntryBuilder);
       }
@@ -195,14 +222,24 @@ ArrayRef<Register> SPIRVIRTranslator::getOrCreateVRegs(const Value &Val) {
 
 bool SPIRVIRTranslator::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry
-  const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+  this->ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
   this->TR = ST->getSPIRVTypeRegistry();
+  this->PtrAnalysis = SPIRVPtrAnalysis(this->TR, &MF.getFunction());
+
+  const auto* M = MF.getFunction().getParent();
+  if(!this->PipelineBindingMDKindID) {
+    this->PipelineBindingMDKindID = M->getMDKindID(kMD::GlobalPipelineBinding);
+  }
+  if(!this->PipelineDescSetMDKindID) {
+    this->PipelineDescSetMDKindID = M->getMDKindID(kMD::GlobalPipelineDescSet);
+  }
 
   // Run the regular IRTranslator
   bool success = IRTranslator::runOnMachineFunction(MF);
 
   // Clean up
   TR->reset();
+  this->PtrAnalysis = None;
   return success;
 }
 
@@ -298,7 +335,6 @@ bool SPIRVIRTranslator::translateInsertValue(const User &U,
   return TR->constrainRegOperands(MIB);
 }
 
-
 // Retrieve an unsigned int from an MDNode with a list of them as operands
 static unsigned int getMetadataUInt(const MDNode *mdNode, unsigned int opIndex,
                                     unsigned int defaultVal = 0) {
@@ -333,23 +369,55 @@ static void addMemoryOperands(const Instruction *val, unsigned int alignment,
 
 bool SPIRVIRTranslator::translateLoad(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  auto Load = dyn_cast<LoadInst>(&U);
+  auto Load = cast<LoadInst>(&U);
   auto ResVReg = getOrCreateVReg(*Load);
   auto ResVRegType = TR->getSPIRVTypeForVReg(ResVReg);
   auto Ptr = getOrCreateVReg(*Load->getPointerOperand());
+
+  auto LoadSPIRVTy = TR->getOrCreateSPIRVType(Load, *EntryBuilder);
+  auto LoadedSPIRVTy = TR->getOrCreateSPIRVType(Load->getType(), *EntryBuilder);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpLoad)
                  .addDef(ResVReg)
                  .addUse(TR->getSPIRVTypeID(ResVRegType))
                  .addUse(Ptr);
   addMemoryOperands(Load, Load->getAlignment(), Load->isVolatile(), MIB);
-  return TR->constrainRegOperands(MIB);
+  if (LoadSPIRVTy == LoadedSPIRVTy) {
+    // no OpCopyLogical required
+    return TR->constrainRegOperands(MIB);
+  } else {
+    // We need a OpCopyLogical to "cast" the type to the expected type.
+    // This is required to work around the mistake that are structure member
+    // decorations.
+    auto CpyLogicalReg = MRI->createGenericVirtualRegister(LLT());
+    auto CpyObjMIB = MIRBuilder.buildInstr(SPIRV::OpCopyObject)
+                         .addDef(CpyLogicalReg)
+                         .addUse(ResVReg);
+    TR->assignSPIRVTypeToVReg(LoadedSPIRVTy, CpyLogicalReg, MIRBuilder);
+
+    return TR->constrainRegOperands(MIB) ||
+           TR->constrainRegOperands(CpyObjMIB);
+  }
 }
 
 bool SPIRVIRTranslator::translateStore(const User &U,
                                        MachineIRBuilder &MIRBuilder) {
-  auto Store = dyn_cast<StoreInst>(&U);
+  auto Store = cast<StoreInst>(&U);
   auto Ptr = getOrCreateVReg(*Store->getPointerOperand());
   auto Obj = getOrCreateVReg(*Store->getValueOperand());
+  auto PtrTy = TR->getSPIRVTypeForVReg(Ptr);
+  auto ObjTy = TR->getSPIRVTypeForVReg(Obj);
+  assert(PtrTy->getOpcode() == SPIRV::OpTypePointer);
+  auto StoredTy = TR->getSPIRVTypeForVReg(PtrTy->getOperand(2).getReg());
+  if (StoredTy != ObjTy) {
+    // insert an OpCopyLogical "cast":
+    auto CpyLogicalReg = MRI->createGenericVirtualRegister(LLT());
+    MIRBuilder.buildInstr(SPIRV::OpCopyObject)
+        .addDef(CpyLogicalReg)
+        .addUse(Obj);
+    TR->assignSPIRVTypeToVReg(StoredTy, CpyLogicalReg, MIRBuilder);
+
+    Obj = CpyLogicalReg;
+  }
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpStore).addUse(Ptr).addUse(Obj);
   addMemoryOperands(Store, Store->getAlignment(), Store->isVolatile(), MIB);
   return TR->constrainRegOperands(MIB);

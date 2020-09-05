@@ -23,15 +23,15 @@
     return #Varname;
 
 #define DEF_EXTENSION_ENUM(EnumName, DefEnumCommand)                           \
-  namespace EnumName {                                                         \
-  enum EnumName { DefEnumCommand(EnumName, MAKE_EXTENSION_ENUM) };             \
-  }
+  enum class EnumName : uint32_t {                                             \
+    DefEnumCommand(EnumName, MAKE_EXTENSION_ENUM)                              \
+  };
 
 #define DEF_EXTENSION_NAME_FUNC_HEADER(EnumName)                               \
-  const char *get##EnumName##Name(EnumName::EnumName e);
+  const char *get##EnumName##Name(EnumName e);
 
 #define DEF_EXTENSION_NAME_FUNC_BODY(EnumName, DefEnumCommand)                 \
-  const char *get##EnumName##Name(EnumName::EnumName e) {                      \
+  const char *get##EnumName##Name(EnumName e) {                                \
     switch (e) { DefEnumCommand(EnumName, MAKE_EXTENSION_NAME_CASE) }          \
     return "UNKNOWN_EXTENSION";                                                \
   }

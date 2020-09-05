@@ -78,7 +78,8 @@ bool SPIRVAddRequirements::runOnMachineFunction(MachineFunction &MF) {
     MIRBuilder.buildInstr(SPIRV::OpCapability).addImm((uint32_t)cap);
   }
   for (const auto &ext : reqHandler.getExtensions()) {
-    MIRBuilder.buildInstr(SPIRV::OpExtension).addImm(ext);
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(static_cast<uint32_t>(ext));
   }
 
   // TODO add a pseudo instr for SPIR-V version
@@ -90,7 +91,7 @@ bool SPIRVAddRequirements::runOnMachineFunction(MachineFunction &MF) {
 static void addVariablePtrInstrReqs(const MachineInstr &MI,
                                     SPIRVRequirementHandler &reqs,
                                     const SPIRVSubtarget &ST) {
-  if (ST.isLogicalAddressing()) {
+  if (!ST.HasAddresses) {
     auto &MRI = MI.getMF()->getRegInfo();
     Register type = MI.getOperand(1).getReg();
     if (MRI.getVRegDef(type)->getOpcode() == SPIRV::OpTypePointer) {
@@ -280,6 +281,9 @@ static void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpPtrAccessChain:
   case SPIRV::OpLoad:
   case SPIRV::OpConstantNull:
+  case SPIRV::OpPtrEqual:
+  case SPIRV::OpPtrNotEqual:
+  case SPIRV::OpPtrDiff:
     addVariablePtrInstrReqs(MI, reqs, ST);
     break;
   default:

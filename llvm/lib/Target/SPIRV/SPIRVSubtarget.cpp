@@ -127,7 +127,7 @@ bool SPIRVSubtarget::canUseCapability(Capability c) const {
   return std::find(caps.begin(), caps.end(), c) != caps.end();
 }
 
-bool SPIRVSubtarget::canUseExtension(Extension::Extension e) const {
+bool SPIRVSubtarget::canUseExtension(Extension e) const {
   const auto &exts = availableExtensions;
   return std::find(exts.begin(), exts.end(), e) != exts.end();
 }
@@ -156,12 +156,11 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
 
 // TODO use command line args for this rather than defaults
 void SPIRVSubtarget::initAvailableExtensions(const Triple &TT) {
-  using namespace Extension;
   if (TT.isVulkanEnvironment()) {
     availableExtensions = {};
   } else {
     // A default extension for testing - should use command line args
-    availableExtensions = {SPV_KHR_no_integer_wrap_decoration};
+    availableExtensions = {Extension::SPV_KHR_no_integer_wrap_decoration};
   }
 }
 
@@ -220,6 +219,10 @@ void SPIRVSubtarget::enableFeatureCapability(const Capability Cap) {
     Has##Var = true;                                                           \
     availableCaps.insert(Enum::Var);                                           \
     enableFeatureCapabilities(Caps);                                           \
+    SmallVector<Extension, 2> ArrExts Exts;                                    \
+    for (const auto Ext : ArrExts) {                                           \
+      availableExtensions.insert(Ext);                                         \
+    }                                                                          \
   }
 #define DEF_CAP_FEATURES(EnumName, DefCommand)                                 \
   DefCommand(EnumName, MAKE_CAP_FEATURE_CASE)
@@ -241,6 +244,10 @@ void SPIRVSubtarget::updateCapabilitiesFromFeatures() {
   if (Has##Var) {                                                              \
     availableCaps.insert(Enum::Var);                                           \
     enableFeatureCapabilities(Caps);                                           \
+    SmallVector<Extension, 2> ArrExts Exts;                                    \
+    for (const auto Ext : ArrExts) {                                           \
+      availableExtensions.insert(Ext);                                         \
+    }                                                                          \
   } else if (!availableCaps.empty()) {                                         \
     availableCaps.erase(Enum::Var);                                            \
   }

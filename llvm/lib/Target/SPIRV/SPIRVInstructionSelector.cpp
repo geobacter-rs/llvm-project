@@ -1265,10 +1265,12 @@ bool SPIRVInstructionSelector::selectBranch(
   // G_BRCOND, we just use OpBranch for a regular unconditional branch.
   const MachineInstr *prevI = I.getPrevNode();
   if (prevI != nullptr && prevI->getOpcode() == TargetOpcode::G_BRCOND) {
+    auto TrueDst = prevI->getOperand(1).getMBB();
+    auto FalseDst = I.getOperand(0).getMBB();
     return MIRBuilder.buildInstr(SPIRV::OpBranchConditional)
         .addUse(prevI->getOperand(0).getReg())
-        .addMBB(prevI->getOperand(1).getMBB())
-        .addMBB(I.getOperand(0).getMBB())
+        .addMBB(TrueDst)
+        .addMBB(FalseDst)
         .constrainAllUses(TII, TRI, RBI);
   } else {
     return MIRBuilder.buildInstr(SPIRV::OpBranch)
@@ -1422,7 +1424,7 @@ bool SPIRVInstructionSelector::selectBuiltinIntrinsic(
   MIRBuilder.buildInstr(SPIRV::OpLoad)
       .addDef(resVReg)
       .addUse(TR.getSPIRVTypeID(resType))
-      .addImm((uint32_t)StorageClass::Input)
+      .addUse(BuiltinGlobal)
       .constrainAllUses(TII, TRI, RBI);
 
   return true;

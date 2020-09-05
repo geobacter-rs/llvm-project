@@ -235,17 +235,16 @@ static void addHeaderOps(Module &M, MachineIRBuilder &MIRBuilder,
                             : ptrSize == 64 ? AddressingModel::Physical64
                                             : AddressingModel::Logical;
   if (ST.HasPhysicalStorageBufferAddresses && IsVk &&
-      addr == AddressingModel::Physical64)
-  {
+      addr == AddressingModel::Physical64) {
     addr = AddressingModel::PhysicalStorageBuffer64;
   }
 
   MemoryModel mem = MemoryModel::Simple;
   if (ST.HasVulkanMemoryModelKHR && IsVk) {
     mem = MemoryModel::VulkanKHR;
-  } else if(ST.HasKernel) {
+  } else if (ST.HasKernel) {
     mem = MemoryModel::OpenCL;
-  } else if(ST.HasShader) {
+  } else if (ST.HasShader) {
     mem = MemoryModel::GLSL450;
   }
   MIRBuilder.buildInstr(SPIRV::OpMemoryModel)
@@ -343,7 +342,7 @@ static void hoistInstrsToMetablock(Module &M, MachineModuleInfo &MMI,
         toRemove.push_back(&MI);
       } else if (MI.getOpcode() == SPIRV::OpExtension) {
         // Here, OpExtension just has a single enum operand, not a string
-        auto ext = Extension::Extension(MI.getOperand(0).getImm());
+        auto ext = Extension(MI.getOperand(0).getImm());
         reqs.addExtension(ext);
         toRemove.push_back(&MI);
       } else if (MI.getOpcode() == SPIRV::OpCapability) {
@@ -644,7 +643,7 @@ extractInstructionsWithGlobalRegsToMetablock(Module &M, MachineModuleInfo &MMI,
       if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
         hoistMetaInstrWithGlobalRegs(MI, MIRBuilder, MB_DebugNames);
         toRemove.push_back(&MI);
-      } else if (OpCode == SPIRV::OpEntryPoint) {
+      } else if (OpCode == SPIRV::OpEntryPoint || OpCode == SPIRV::OpExecutionMode) {
         hoistMetaInstrWithGlobalRegs(MI, MIRBuilder, MB_EntryPoints);
         toRemove.push_back(&MI);
       } else if (TII->isDecorationInstr(MI)) {
@@ -675,11 +674,13 @@ static void addEntryPointLinkageInterfaces(Module &M, MachineModuleInfo &MMI,
   for (MachineInstr &MI : decMBB) {
     const unsigned OpCode = MI.getOpcode();
     const unsigned numOps = MI.getNumOperands();
-    if (OpCode == SPIRV::OpDecorate &&
-        MI.getOperand(1).getImm() == (uint32_t)Decoration::LinkageAttributes &&
-        MI.getOperand(numOps - 1).getImm() == (uint32_t)LinkageType::Import) {
-      const Register target = MI.getOperand(0).getReg();
-      inputLinkedIDs.push_back(target);
+    if (OpCode == SPIRV::OpDecorate) {
+      if (MI.getOperand(1).getImm() ==
+              (uint32_t)Decoration::LinkageAttributes &&
+          MI.getOperand(numOps - 1).getImm() == (uint32_t)LinkageType::Import) {
+        const Register target = MI.getOperand(0).getReg();
+        inputLinkedIDs.push_back(target);
+      }
     }
   }
 
@@ -889,6 +890,9 @@ bool SPIRVGlobalTypesAndRegNum::runOnModule(Module &M) {
   const auto &ST = static_cast<const SPIRVSubtarget &>(metaMF.getSubtarget());
 
   SPIRVRequirementHandler reqs;
+  for(const auto Ext : ST.getAvailableExtensions()) {
+    reqs.addExtension(Ext);
+  }
 
   addHeaderOps(M, MIRBuilder, reqs, ST);
 

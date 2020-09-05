@@ -54,6 +54,21 @@ llvm::Optional<Dim> getDimFromStr(llvm::StringRef Name) {
       .Case("SubpassData", {Dim::DIM_SubpassData})
       .Default(llvm::None);
 }
+llvm::Optional<Dim> decodeDimMD(const llvm::Metadata* MD) {
+  if (!MD) {
+    return llvm::None;
+  }
+  if (auto *MDStr = llvm::dyn_cast<llvm::MDString>(MD)) {
+    return getDimFromStr(MDStr->getString());
+  }
+  if (auto *C = llvm::mdconst::dyn_extract<llvm::ConstantInt>(MD)) {
+    const auto Value = static_cast<Dim>(C->getLimitedValue(~0ULL));
+    if (!getDimName(Value).empty()) {
+      return {Value};
+    }
+  }
+  return llvm::None;
+}
 
 GEN_ENUM_IMPL(SamplerAddressingMode)
 GEN_ENUM_IMPL(SamplerFilterMode)

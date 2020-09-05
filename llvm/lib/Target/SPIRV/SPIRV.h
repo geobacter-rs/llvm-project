@@ -34,6 +34,11 @@ void initializeSPIRVBlockLabelerPass(PassRegistry &);
 void initializeSPIRVAddRequirementsPass(PassRegistry &);
 void initializeSPIRVLegalizeConstsPassPass(PassRegistry &);
 void initializeSPIRVGlobalTypesAndRegNumPass(PassRegistry &);
+
+void initializeSPIRVStructCFPass(PassRegistry &);
+extern char &SPIRVStructCFID;
+void initializeSPIRVEntryPointsPass(PassRegistry &);
+extern char &SPIRVEntryPointsID;
 } // namespace llvm
 
 #endif
