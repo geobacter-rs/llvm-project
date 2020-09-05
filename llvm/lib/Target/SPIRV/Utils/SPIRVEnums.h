@@ -248,31 +248,41 @@ class Metadata;
   X(N, GroupNonUniformClustered, 67, {Capability::GroupNonUniform}, {},        \
     0x10300, 0)                                                                \
   X(N, GroupNonUniformQuad, 68, {Capability::GroupNonUniform}, {}, 0x10300, 0) \
-  X(N, SubgroupBallotKHR, 4423, {}, {SPV_KHR_shader_ballot}, 0, 0)             \
-  X(N, DrawParameters, 4427, {Capability::Shader}, {DRAW_PARAMS}, 0x10300, 0)  \
-  X(N, SubgroupVoteKHR, 4431, {}, {SPV_KHR_subgroup_vote}, 0, 0)               \
-  X(N, StorageBuffer16BitAccess, 4433, {}, {SPV_16_BIT}, 0x10300, 0)           \
-  X(N, StorageUniform16, 4434, {Capability::StorageBuffer16BitAccess},         \
-    {SPV_16_BIT}, 0x10300, 0)                                                  \
-  X(N, StoragePushConstant16, 4435, {}, {SPV_16_BIT}, 0x10300, 0)              \
-  X(N, StorageInputOutput16, 4436, {}, {SPV_16_BIT}, 0x10300, 0)               \
-  X(N, DeviceGroup, 4437, {}, {SPV_KHR_device_group}, 0x10300, 0)              \
-  X(N, MultiView, 4439, {Capability::Shader}, {SPV_KHR_multiview}, 0x10300, 0) \
+  X(N, SubgroupBallotKHR, 4423, {}, {Extension::SPV_KHR_shader_ballot}, 0, 0)  \
+  X(N, DrawParameters, 4427, {Capability::Shader}, {Extension::DRAW_PARAMS},   \
+    0x10300, 0)                                                                \
+  X(N, SubgroupVoteKHR, 4431, {}, {Extension::SPV_KHR_subgroup_vote}, 0, 0)    \
+  X(N, StorageBuffer16BitAccess, 4433, {}, {Extension::SPV_16_BIT}, 0x10300,   \
+    0)                                                                         \
+  X(N, StorageUniform16BitAccess, 4434,                                        \
+    {Capability::StorageBuffer16BitAccess}, {Extension::SPV_16_BIT}, 0x10300,  \
+    0)                                                                         \
+  X(N, StoragePushConstant16BitAccess, 4435, {}, {Extension::SPV_16_BIT},      \
+    0x10300, 0)                                                                \
+  X(N, StorageInputOutput16BitAccess, 4436, {}, {Extension::SPV_16_BIT},       \
+    0x10300, 0)                                                                \
+  X(N, DeviceGroup, 4437, {}, {Extension::SPV_KHR_device_group}, 0x10300, 0)   \
+  X(N, MultiView, 4439, {Capability::Shader}, {Extension::SPV_KHR_multiview},  \
+    0x10300, 0)                                                                \
   X(N, VariablePointersStorageBuffer, 4441, {Capability::Shader},              \
-    {SPV_VAR_PTR}, 0x10300, 0)                                                 \
+    {Extension::SPV_VAR_PTR}, 0x10300, 0)                                      \
   X(N, VariablePointers, 4442, {Capability::VariablePointersStorageBuffer},    \
-    {SPV_VAR_PTR}, 0x10300, 0)                                                 \
-  X(N, AtomicStorageOps, 4445, {}, {SPV_KHR_shader_atomic_counter_ops}, 0, 0)  \
-  X(N, SampleMaskPostDepthCoverage, 4447, {}, {SPV_PDC}, 0, 0)                 \
-  X(N, StorageBuffer8BitAccess, 4448, {}, {SPV_KHR_8bit_storage}, 0, 0)        \
-  X(N, UniformAndStorageBuffer8BitAccess, 4449,                                \
-    {Capability::StorageBuffer8BitAccess}, {SPV_KHR_8bit_storage}, 0, 0)       \
-  X(N, StoragePushConstant8, 4450, {}, {SPV_KHR_8bit_storage}, 0, 0)           \
-  X(N, DenormPreserve, 4464, {}, {SPV_FLT_CTRL}, 0x10400, 0)                   \
-  X(N, DenormFlushToZero, 4465, {}, {SPV_FLT_CTRL}, 0x10400, 0)                \
-  X(N, SignedZeroInfNanPreserve, 4466, {}, {SPV_FLT_CTRL}, 0x10400, 0)         \
-  X(N, RoundingModeRTE, 4467, {}, {SPV_FLT_CTRL}, 0x10400, 0)                  \
-  X(N, RoundingModeRTZ, 4468, {}, {SPV_FLT_CTRL}, 0x10400, 0)                  \
+    {Extension::SPV_VAR_PTR}, 0x10300, 0)                                      \
+  X(N, AtomicStorageOps, 4445, {},                                             \
+    {Extension::SPV_KHR_shader_atomic_counter_ops}, 0, 0)                      \
+  X(N, SampleMaskPostDepthCoverage, 4447, {}, {Extension::SPV_PDC}, 0, 0)      \
+  X(N, StorageBuffer8BitAccess, 4448, {}, {Extension::SPV_KHR_8bit_storage},   \
+    0, 0)                                                                      \
+  X(N, StorageUniform8BitAccess, 4449, {Capability::StorageBuffer8BitAccess},  \
+    {Extension::SPV_KHR_8bit_storage}, 0, 0)                                   \
+  X(N, StoragePushConstant8BitAccess, 4450, {},                                \
+    {Extension::SPV_KHR_8bit_storage}, 0, 0)                                   \
+  X(N, DenormPreserve, 4464, {}, {Extension::SPV_FLT_CTRL}, 0x10400, 0)        \
+  X(N, DenormFlushToZero, 4465, {}, {Extension::SPV_FLT_CTRL}, 0x10400, 0)     \
+  X(N, SignedZeroInfNanPreserve, 4466, {}, {Extension::SPV_FLT_CTRL}, 0x10400, \
+    0)                                                                         \
+  X(N, RoundingModeRTE, 4467, {}, {Extension::SPV_FLT_CTRL}, 0x10400, 0)       \
+  X(N, RoundingModeRTZ, 4468, {}, {Extension::SPV_FLT_CTRL}, 0x10400, 0)       \
   X(N, Float16ImageAMD, 5008, {Capability::Shader}, {}, 0, 0)                  \
   X(N, ImageGatherBiasLodAMD, 5009, {Capability::Shader}, {}, 0, 0)            \
   X(N, FragmentMaskAMD, 5010, {Capability::Shader}, {}, 0, 0)                  \
@@ -330,7 +340,8 @@ class Metadata;
   X(N, ComputeDerivativeGroupQuadsNV, 5288, {}, {}, 0, 0)                      \
   X(N, ComputeDerivativeGroupLinearNV, 5350, {}, {}, 0, 0)                     \
   X(N, FragmentDensityEXT, 5291, {Capability::Shader}, {}, 0, 0)               \
-  X(N, PhysicalStorageBufferAddresses, 5347, {Capability::Shader}, {}, 0, 0)   \
+  X(N, PhysicalStorageBufferAddresses, 5347, {Capability::Shader},             \
+    {Extension::SPV_EXT_physical_storage_buffer}, 0, 0)                        \
   X(N, CooperativeMatrixNV, 5357, {Capability::Shader}, {}, 0, 0)
 GEN_ENUM_HEADER(Capability)
 
@@ -686,8 +697,10 @@ GEN_ENUM_HEADER(FunctionParameterAttribute)
   X(N, MaxByteOffset, 45, {Capability::Addresses}, {}, 0, 0)                   \
   X(N, AlignmentId, 46, {Capability::Kernel}, {}, 0, 0)                        \
   X(N, MaxByteOffsetId, 47, {Capability::Addresses}, {}, 0, 0)                 \
-  X(N, NoSignedWrap, 4469, {}, {SK(no_integer_wrap_decoration)}, 0x10400, 0)   \
-  X(N, NoUnsignedWrap, 4470, {}, {SK(no_integer_wrap_decoration)}, 0x10400, 0) \
+  X(N, NoSignedWrap, 4469, {}, {Extension::SK(no_integer_wrap_decoration)},    \
+    0x10400, 0)                                                                \
+  X(N, NoUnsignedWrap, 4470, {}, {Extension::SK(no_integer_wrap_decoration)},  \
+    0x10400, 0)                                                                \
   X(N, ExplicitInterpAMD, 4999, {}, {}, 0, 0)                                  \
   X(N, OverrideCoverageNV, 5248, {Capability::SampleMaskOverrideCoverageNV},   \
     {}, 0, 0)                                                                  \
@@ -935,6 +948,8 @@ const static char GlobalStorageClass[] = "spirv.StorageClass";
 const static char GlobalDecoration[] = "spirv.Decoration";
 const static char GlobalTypeSpec[] = "spirv.TypeSpec";
 const static char EntryExeModel[] = "spirv.ExecutionModel";
+const static char GlobalPipelineBinding[] = "spirv.PipelineBinding";
+const static char GlobalPipelineDescSet[] = "spirv.PipelineDescSet";
 } // namespace kMD
 
 #endif

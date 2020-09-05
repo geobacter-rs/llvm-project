@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Legalize constant expressions by "lowering" them into instructions and
-// inserting them into functions where their used.
+// inserting them into functions where they're used.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,17 +20,15 @@ namespace llvm {
 
 class SPIRVLegalizeConsts : public PassInfoMixin<SPIRVLegalizeConsts> {
   const SPIRVSubtarget *ST = nullptr;
-  DominatorTree *DT = nullptr;
   SetVector<Instruction *> WorkList;
-  DenseMap<ConstantExpr *, Instruction *> Legalized;
 
+  bool legalExpr(ConstantExpr *CE) const;
   bool legalOpcode(ConstantExpr *CE) const;
-  Instruction *legalizeOperand(ConstantExpr *CE, Instruction *User);
+  Value *legalizeOperand(ConstantExpr *CE, Instruction *User);
 
 public:
   SPIRVLegalizeConsts() = default;
-  PreservedAnalyses runImpl(Function &F, const SPIRVSubtarget &ST,
-                            DominatorTree &RunDT);
+  PreservedAnalyses runImpl(Function &F, const SPIRVSubtarget &ST);
 };
 
 } // namespace llvm

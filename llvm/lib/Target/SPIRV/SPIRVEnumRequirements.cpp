@@ -38,9 +38,7 @@
   }
 
 #define DEF_EXTENSION_FUNC_BODY(EnumName, DefEnumCommand)                      \
-  const std::vector<Extension::Extension> get##EnumName##Extensions(           \
-      EnumName e) {                                                            \
-    using namespace Extension;                                                 \
+  const std::vector<Extension> get##EnumName##Extensions(EnumName e) {         \
     switch (e) { DefEnumCommand(EnumName, MAKE_EXTENSION_CASE) }               \
     return {};                                                                 \
   }
@@ -88,7 +86,7 @@
      * capability requirements, use the list of extensions (if the subtarget   \
      * can handle them all) */                                                 \
     if (std::all_of(reqExts.begin(), reqExts.end(),                            \
-                    [&ST](const Extension::Extension &ext) {                   \
+                    [&ST](const Extension &ext) {                   \
                       return ST.canUseExtension(ext);                          \
                     })) {                                                      \
       return {true, {}, reqExts, 0, 0}; /*TODO Add versions to extensions */   \
@@ -139,4 +137,3 @@ GEN_ENUM_REQS_IMPL(Scope)
 GEN_ENUM_REQS_IMPL(GroupOperation)
 GEN_ENUM_REQS_IMPL(KernelEnqueueFlags)
 GEN_ENUM_REQS_IMPL(KernelProfilingInfo)
-

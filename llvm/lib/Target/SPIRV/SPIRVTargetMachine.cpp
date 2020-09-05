@@ -27,6 +27,9 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 
 #include "SPIRVSubtarget.h"
 #include "SPIRVTypeRegistry.h"
@@ -55,6 +58,8 @@ extern "C" void LLVMInitializeSPIRVTarget() {
   initializeSPIRVGlobalTypesAndRegNumPass(PR);
   initializeSPIRVAddRequirementsPass(PR);
   initializeSPIRVLegalizeConstsPassPass(PR);
+  initializeSPIRVStructCFPass(PR);
+  initializeSPIRVEntryPointsPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -158,11 +163,21 @@ void SPIRVPassConfig::addISelPrepare() {
   TargetPassConfig::addISelPrepare();
   addPass(createSPIRVBasicBlockDominancePass());
   addPass(createSPIRVLegalizeConstsPass());
+  addPass(createInferAddressSpacesPass(4));
+  addPass(createInstructionCombiningPass());
+  addPass(createSPIRVLegalizeConstsPass());
+  addPass(createInferAddressSpacesPass(4));
+  addPass(createDeadInstEliminationPass());
+  addPass(createLoopSimplifyPass());
+  addPass(createStructurizeCFGPass());
 }
 
 // Add custom passes right before emitting asm/obj files. Global VReg numbering
 // is added here, as it emits invalid MIR, so no subsequent passes would work
 void SPIRVPassConfig::addPreEmitPass2() {
+  addPass(&SPIRVStructCFID);
+  addPass(&SPIRVEntryPointsID);
+
   // Insert missing block labels and terminators. Fix instrs with MBB references
   addPass(createSPIRVBlockLabelerPass());
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Legalize constant expressions by "lowering" them into instructions and
-// inserting them into functions where their used.
+// inserting them into functions where they're used.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,11 +22,8 @@
 using namespace llvm;
 
 PreservedAnalyses SPIRVLegalizeConsts::runImpl(Function &F,
-                                               const SPIRVSubtarget &RunST,
-                                               DominatorTree &RunDT) {
-  Legalized.clear();
+                                               const SPIRVSubtarget &RunST) {
   ST = &RunST;
-  DT = &RunDT;
 
   if (ST->HasKernel) {
     // The Kernel Capability supports everything. We have no work to do.
@@ -48,7 +45,7 @@ PreservedAnalyses SPIRVLegalizeConsts::runImpl(Function &F,
     for (unsigned OpIt = 0; OpIt < Top->getNumOperands(); ++OpIt) {
       auto *Op = Top->getOperand(OpIt);
       if (auto *CE = dyn_cast<ConstantExpr>(Op)) {
-        if (!legalOpcode(CE)) {
+        if (!legalExpr(CE)) {
           auto *NewOp = legalizeOperand(CE, Top);
           Top->setOperand(OpIt, NewOp);
         }
@@ -60,6 +57,20 @@ PreservedAnalyses SPIRVLegalizeConsts::runImpl(Function &F,
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GlobalsAA>();
   return PA;
+}
+bool SPIRVLegalizeConsts::legalExpr(ConstantExpr *CE) const {
+  if (!legalOpcode(CE)) {
+    return false;
+  }
+
+  for (auto &Op : CE->operands()) {
+    if (auto *CE = dyn_cast<ConstantExpr>(Op.get())) {
+      if (!legalExpr(CE)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 bool SPIRVLegalizeConsts::legalOpcode(ConstantExpr *CE) const {
   const auto Code = CE->getOpcode();
@@ -87,44 +98,16 @@ bool SPIRVLegalizeConsts::legalOpcode(ConstantExpr *CE) const {
     return true;
   }
 }
-Instruction *SPIRVLegalizeConsts::legalizeOperand(ConstantExpr *CE,
-                                                  Instruction *User) {
-  auto It = Legalized.insert({CE, nullptr});
-  if (!It.second) {
-    return It.first->second;
-  }
-
-  auto *I = CE->getAsInstruction();
-  It.first->second = I;
-  WorkList.insert(I);
-
-  // now find a suitable place to insert. We look for the common dominator of
-  // this constant expr and all of it's instruction users in this function.
-  BasicBlock *BB = User->getParent();
-  for (auto *Op : CE->users()) {
-    if (auto *OpI = dyn_cast<Instruction>(Op)) {
-      if (OpI == User) {
-        continue;
-      }
-      if (OpI->getFunction() != User->getFunction()) {
-        continue;
-      }
-
-      BB = DT->findNearestCommonDominator(BB, OpI->getParent());
-      if (!BB) {
-        // this shouldn't happen, but if it does, just put
-        // the new instruction into the entry block.
-        BB = &User->getFunction()->getEntryBlock();
-        break;
-      }
+Value *SPIRVLegalizeConsts::legalizeOperand(ConstantExpr *CE,
+                                            Instruction *User) {
+  if (CE->getOpcode() == Instruction::AddrSpaceCast) {
+    if (isa<ConstantPointerNull>(CE->getOperand(0))) {
+      return ConstantPointerNull::get(cast<PointerType>(CE->getType()));
     }
   }
-
-  Instruction *Insertion = BB->getFirstNonPHIOrDbgOrLifetime();
-  while (isa<AllocaInst>(Insertion)) {
-    Insertion = Insertion->getNextNode();
-  }
-  I->insertBefore(Insertion);
+  auto *I = CE->getAsInstruction();
+  WorkList.insert(I);
+  I->insertBefore(User);
   return I;
 }
 
@@ -141,17 +124,15 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const TargetMachine &TM = TPC.getTM<TargetMachine>();
     const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
-    auto PA = Impl.runImpl(F, ST, DT);
+    auto PA = Impl.runImpl(F, ST);
     return !PA.areAllPreserved();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.setPreservesCFG();
   }

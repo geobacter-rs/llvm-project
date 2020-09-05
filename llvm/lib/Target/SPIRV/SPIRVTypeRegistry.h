@@ -28,12 +28,14 @@
 #include "SPIRVEnums.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
+#include <unordered_map>
+
 namespace llvm {
 using SPIRVType = const MachineInstr;
 
 class SPIRVTypeRegistry {
 
-private:
+public:
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Reconstituted from ASSIGN_TYPE machineInstrs in subsequent passes.
@@ -41,6 +43,8 @@ private:
 
   // Maps LLVM IR types to SPIR-V types (only used in IRTranslator pass)
   DenseMap<const Type *, SPIRVType *> TypeToSPIRVTypeMap;
+
+  DenseMap<const Value *, SPIRVType *> ValueToSPIRVTypeMap;
 
   // Maps OpTypeXXX opcode to a list of OpTypeXXX instrs (for deduplication).
   DenseMap<unsigned, std::vector<SPIRVType *> *> OpcodeToSPIRVTypeMap;
@@ -81,6 +85,12 @@ public:
   SPIRVType *
   getOrCreateSPIRVType(const Type *type, MachineIRBuilder &MIRBuilder,
                        AccessQualifier accessQual = AccessQualifier::ReadWrite);
+  SPIRVType *
+  getOrCreateSPIRVType(const Value *V, MachineIRBuilder &MIRBuilder,
+                       AccessQualifier accessQual = AccessQualifier::ReadWrite);
+
+  /// To be used by SPIRVPtrAnalysis only.
+  void assignValueType(const Value *V, const SPIRVType *SpirvType);
 
   // Return the SPIR-V type instruction corresponding to the given VReg, or
   // nullptr if no such type instruction exists.
@@ -140,6 +150,8 @@ public:
 
   SPIRVType *getOpTypeVector(uint32_t numElems, SPIRVType *elemType,
                              MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOpTypeMatrix(uint32_t NumCols, uint32_t NumRows,
+                             SPIRVType *ElemType, MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeArray(uint32_t numElems, SPIRVType *elemType,
                             MachineIRBuilder &MIRBuilder);
@@ -151,7 +163,9 @@ public:
                              MachineIRBuilder &MIRBuilder, StringRef name = "");
 
   SPIRVType *getOpTypePointer(StorageClass sc, SPIRVType *elemType,
-                              MachineIRBuilder &MIRBuilder);
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVType* ForwardPtr = nullptr);
+  SPIRVType *getOpTypeForwardPointer(StorageClass SC, MachineIRBuilder& MIRB);
 
   SPIRVType *getOpTypeFunction(SPIRVType *retType,
                                const SmallVectorImpl<SPIRVType *> &argTypes,

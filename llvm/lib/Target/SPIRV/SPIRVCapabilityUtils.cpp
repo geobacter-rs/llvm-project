@@ -56,7 +56,7 @@ void SPIRVRequirementHandler::addCapability(Capability toAdd) {
 void SPIRVRequirementHandler::addExtensions(const ExtensionList &toAdd) {
   allExtensions.insert(toAdd.begin(), toAdd.end());
 }
-void SPIRVRequirementHandler::addExtension(Extension::Extension toAdd) {
+void SPIRVRequirementHandler::addExtension(Extension toAdd) {
   allExtensions.insert(toAdd);
 }
 
@@ -126,7 +126,7 @@ void SPIRVRequirementHandler::checkSatisfiable(
   for (auto cap : minimalCaps) {
     if (!ST.canUseCapability(cap)) {
       errs() << "Capability not supported: " << getCapabilityName(cap) << "\n";
-      isSatisfiable = false;
+      //isSatisfiable = false;
     }
   }
 

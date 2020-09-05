@@ -79,4 +79,8 @@ let TargetPrefix = "spirv" in {
   def int_spirv_kill :
     Intrinsic<[], [], [IntrNoMem, IntrNoReturn]>,
     GCCBuiltin<"__builtin_spirv_kill">;
+  def int_spirv_control_barrier :
+    Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [],
+              [IntrConvergent, ImmArg<0>, ImmArg<1>, ImmArg<2>]>,
+    GCCBuiltin<"__builtin_spirv_control_barrier">;
 }
