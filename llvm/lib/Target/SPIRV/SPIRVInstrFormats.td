@@ -23,6 +23,7 @@ class Op<bits<16> Opcode, dag outs, dag ins, string asmstr>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = [];
+  let hasSideEffects = 0;
 }
 
 // Pseudo instructions

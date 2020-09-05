@@ -180,6 +180,39 @@ SPIRVType *SPIRVTypeRegistry::getOpTypeVector(uint32_t numElems,
   return MIB;
 }
 
+SPIRVType *SPIRVTypeRegistry::getOpTypeMatrix(uint32_t NumCols,
+                                              uint32_t NumRows,
+                                              SPIRVType *ElemType,
+                                              MachineIRBuilder &MIRBuilder) {
+  using namespace SPIRV;
+  if (NumCols < 2 || NumCols > 4) {
+    report_fatal_error("Invalid matrix column count");
+  }
+  if (NumRows < 2 || NumRows > 4) {
+    report_fatal_error("Invalid matrix row count");
+  }
+  if (ElemType->getOpcode() != OpTypeFloat) {
+    errs() << *ElemType;
+    report_fatal_error("Invalid matrix element type");
+  }
+
+  auto *ColType = getOpTypeVector(NumRows, ElemType, MIRBuilder);
+
+  auto tys = getExistingTypesForOpcode(OpTypeMatrix);
+  for (const auto &ty : *tys) {
+    if (ty->getOperand(2).getImm() == NumCols &&
+        ty->getOperand(1).getReg() == getSPIRVTypeID(ColType)) {
+      return ty;
+    }
+  }
+  auto MIB = MIRBuilder.buildInstr(OpTypeMatrix)
+                 .addDef(createTypeVReg(MIRBuilder))
+                 .addUse(getSPIRVTypeID(ColType))
+                 .addImm(NumCols);
+  tys->push_back(MIB);
+  return MIB;
+}
+
 static Register buildConstantI32(uint32_t val, MachineIRBuilder &MIRBuilder,
                                  SPIRVTypeRegistry *TR) {
   auto &MF = MIRBuilder.getMF();
@@ -208,6 +241,9 @@ SPIRVType *SPIRVTypeRegistry::getOpTypeArray(uint32_t numElems,
   if (elemType->getOpcode() == SPIRV::OpTypeVoid) {
     errs() << *elemType;
     report_fatal_error("Invalid array element type");
+  }
+  if (numElems == 0) {
+    report_fatal_error("Invalid array length (== 0)");
   }
   Register numElementsVReg = buildConstantI32(numElems, MIRBuilder, this);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeArray)
@@ -288,7 +324,8 @@ static SPIRVType *handleOpenCLBuiltin(const StringRef name,
 
 SPIRVType *SPIRVTypeRegistry::getOpTypePointer(StorageClass sc,
                                                SPIRVType *elemType,
-                                               MachineIRBuilder &MIRBuilder) {
+                                               MachineIRBuilder &MIRBuilder,
+                                               SPIRVType *ForwardPtr) {
   auto tys = getExistingTypesForOpcode(SPIRV::OpTypePointer);
   for (const auto &ty : *tys) {
     if (ty->getOperand(1).getImm() == (uint32_t)sc &&
@@ -296,12 +333,25 @@ SPIRVType *SPIRVTypeRegistry::getOpTypePointer(StorageClass sc,
       return ty;
     }
   }
+  Register Def;
+  if (ForwardPtr) {
+    assert(ForwardPtr->getOpcode() == SPIRV::OpTypeForwardPointer);
+    Def = getSPIRVTypeID(ForwardPtr);
+  } else {
+    Def = createTypeVReg(MIRBuilder);
+  }
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypePointer)
-                 .addDef(createTypeVReg(MIRBuilder))
+                 .addDef(Def)
                  .addImm((uint32_t)sc)
                  .addUse(getSPIRVTypeID(elemType));
   tys->push_back(MIB);
   return MIB;
+}
+SPIRVType *SPIRVTypeRegistry::getOpTypeForwardPointer(StorageClass SC,
+                                                      MachineIRBuilder &MIRB) {
+  return MIRB.buildInstr(SPIRV::OpTypeForwardPointer)
+      .addDef(createTypeVReg(MIRB))
+      .addImm((uint32_t)SC);
 }
 
 SPIRVType *SPIRVTypeRegistry::getOpTypeFunction(
@@ -350,8 +400,13 @@ SPIRVType *SPIRVTypeRegistry::createSPIRVType(const Type *Ty,
     auto el = getOrCreateSPIRVType(Ty->getVectorElementType(), MIRBuilder);
     return getOpTypeVector(Ty->getVectorNumElements(), el, MIRBuilder);
   } else if (Ty->isArrayTy()) {
-    auto *el = getOrCreateSPIRVType(Ty->getArrayElementType(), MIRBuilder);
-    return getOpTypeArray(Ty->getArrayNumElements(), el, MIRBuilder);
+    if (Ty->getArrayNumElements() == 0) {
+      SmallVector<SPIRVType *, 1> Members;
+      return getOpTypeStruct(Members, MIRBuilder);
+    } else {
+      auto *el = getOrCreateSPIRVType(Ty->getArrayElementType(), MIRBuilder);
+      return getOpTypeArray(Ty->getArrayNumElements(), el, MIRBuilder);
+    }
   } else if (auto stype = dyn_cast<StructType>(Ty)) {
     const StringRef name = stype->hasName() ? stype->getName() : "";
     if (isOpenCLBuiltinType(stype)) {
@@ -414,12 +469,28 @@ SPIRVType *SPIRVTypeRegistry::getOrCreateSPIRVType(const Type *type,
   }
 }
 
+SPIRVType *SPIRVTypeRegistry::getOrCreateSPIRVType(const Value *V,
+                                                   MachineIRBuilder &MIRBuilder,
+                                                   AccessQualifier accessQual) {
+  auto I = ValueToSPIRVTypeMap.find(V);
+  if (I != ValueToSPIRVTypeMap.end()) {
+    return I->second;
+  } else {
+    return getOrCreateSPIRVType(V->getType(), MIRBuilder, accessQual);
+  }
+}
+void SPIRVTypeRegistry::assignValueType(const Value *V,
+                                        const SPIRVType *SpirvType) {
+  const auto I = ValueToSPIRVTypeMap.insert({V, SpirvType});
+  assert(I.second);
+}
+
 SPIRVType *SPIRVTypeRegistry::getPtrUIntType(MachineIRBuilder &MIRBuilder) {
   return getOpTypeInt(pointerSize, MIRBuilder, false);
 }
 
 SPIRVType *SPIRVTypeRegistry::getPairStruct(SPIRVType *elem0, SPIRVType *elem1,
-                                           MachineIRBuilder &MIRBuilder) {
+                                            MachineIRBuilder &MIRBuilder) {
   SmallVector<SPIRVType *, 2> elems = {elem0, elem1};
   return getOpTypeStruct(elems, MIRBuilder);
 }
@@ -591,6 +662,14 @@ SPIRVTypeRegistry::addressSpaceToStorageClass(unsigned int addressSpace) {
     return StorageClass::Generic;
   case 5:
     return StorageClass::Input;
+  case 6:
+    return StorageClass::Output;
+  case 7:
+    return StorageClass::Uniform;
+  case 8:
+    return StorageClass::StorageBuffer;
+  case 9:
+    return StorageClass::PhysicalStorageBuffer;
   default:
     llvm_unreachable("Unknown address space");
   }

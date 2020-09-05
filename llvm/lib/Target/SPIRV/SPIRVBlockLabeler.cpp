@@ -107,7 +107,8 @@ bool SPIRVBlockLabeler::runOnMachineFunction(MachineFunction &MF) {
   MIRBuilder.setMF(MF);
 
   std::map<MBB_ID, Register> bbNumToLabelMap;
-  SmallVector<MachineInstr *, 4> branches, condBranches, phis;
+  SmallVector<MachineInstr *, 4> branches, condBranches, phis, LoopMerges,
+      SelectionMerges;
 
   for (MachineBasicBlock &MBB : MF) {
     // Add the missing OpLabel in the right place
@@ -124,6 +125,10 @@ bool SPIRVBlockLabeler::runOnMachineFunction(MachineFunction &MF) {
           MI.addOperand(MachineOperand::CreateMBB(MBB.getNextNode()));
         }
         condBranches.push_back(&MI);
+      } else if(MI.getOpcode() == OpLoopMerge) {
+        LoopMerges.push_back(&MI);
+      } else if(MI.getOpcode() == OpSelectionMerge) {
+        SelectionMerges.push_back(&MI);
       } else if (MI.getOpcode() == OpPhi) {
         phis.push_back(&MI);
       }
@@ -154,6 +159,27 @@ bool SPIRVBlockLabeler::runOnMachineFunction(MachineFunction &MF) {
                    .addUse(getLabelIDForMBB(bbNumToLabelMap, bbNum0))
                    .addUse(getLabelIDForMBB(bbNumToLabelMap, bbNum1));
     replaceInstr(branch, MIB, MIRBuilder);
+  }
+
+  for (const auto &LoopMerge : LoopMerges) {
+    auto BbNum0 = getMBBID(LoopMerge->getOperand(0));
+    auto BbNum1 = getMBBID(LoopMerge->getOperand(1));
+    auto MIB = MIRBuilder.buildInstrNoInsert(OpLoopMerge)
+        .addUse(getLabelIDForMBB(bbNumToLabelMap, BbNum0))
+        .addUse(getLabelIDForMBB(bbNumToLabelMap, BbNum1))
+        .add(LoopMerge->getOperand(2));
+    for(unsigned I = 3; I < LoopMerge->getNumOperands(); ++I) {
+      MIB.add(LoopMerge->getOperand(I));
+    }
+    replaceInstr(LoopMerge, MIB, MIRBuilder);
+  }
+
+  for (const auto &SelMerge : SelectionMerges) {
+    auto BbNum0 = getMBBID(SelMerge->getOperand(0));
+    auto MIB = MIRBuilder.buildInstrNoInsert(OpSelectionMerge)
+        .addUse(getLabelIDForMBB(bbNumToLabelMap, BbNum0))
+        .add(SelMerge->getOperand(1));
+    replaceInstr(SelMerge, MIB, MIRBuilder);
   }
 
   // Replace MBB references with label IDs in OpPhi instructions

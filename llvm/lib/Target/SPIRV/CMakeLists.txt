@@ -10,8 +10,6 @@ tablegen(LLVM SPIRVGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(SPIRVCommonTableGen)
 
-set(LLVM_LINK_COMPONENTS SPIRVUtils SPIRVAsmPrinter)
-
 add_llvm_target(SPIRVCodeGen
   SPIRVAddRequirementsPass.cpp
   SPIRVAsmPrinter.cpp
@@ -19,6 +17,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVBlockLabeler.cpp
   SPIRVCallLowering.cpp
   SPIRVCapabilityUtils.cpp
+  SPIRVEntryPoints.cpp
   SPIRVEnumRequirements.cpp
   SPIRVGlobalTypesAndRegNumPass.cpp
   SPIRVInstrInfo.cpp
@@ -33,6 +32,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterInfo.cpp
   SPIRVStrings.cpp
   SPIRVSubtarget.cpp
+  SPIRVStructCF.cpp
   SPIRVTargetMachine.cpp
   SPIRVTypeRegistry.cpp
   )
