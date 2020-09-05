@@ -70,6 +70,20 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "\x01\xF7"))
       return file_magic::xcoff_object_64;
     break;
+  case 0x03: {
+    // big SPIRV
+    if (startswith(Magic, "\x03\x02\x23\x07")) {
+      return file_magic::spirv;
+    }
+    break;
+  }
+  case 0x07: {
+    // little SPIRV
+    if (startswith(Magic, "\x07\x23\x02\x03")) {
+      return file_magic::spirv;
+    }
+    break;
+  }
 
   case 0xDE: // 0x0B17C0DE = BC wraper
     if (startswith(Magic, "\xDE\xC0\x17\x0B"))
