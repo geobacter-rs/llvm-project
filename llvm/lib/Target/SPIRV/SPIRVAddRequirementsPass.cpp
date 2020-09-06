@@ -24,7 +24,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/PassSupport.h"
+#include "llvm/Pass.h"
 
 #include "SPIRV.h"
 #include "SPIRVCapabilityUtils.h"

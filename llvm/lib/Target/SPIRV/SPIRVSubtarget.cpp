@@ -76,8 +76,8 @@ static bool computeOpenCLImageSupport(const Triple &TT) { return true; }
 // TODO use command line args for this rather than defaulting to true
 static bool computeOpenCLFullProfile(const Triple &TT) { return true; }
 
-SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS,
+SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const StringRef &CPU,
+                               const StringRef &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, FS), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),

@@ -23,8 +23,8 @@ class MCSymbol;
 class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
-  MCSectionSPIRV(SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_SPIRV, K, Begin) {}
+  MCSectionSPIRV(StringRef Name, SectionKind K, MCSymbol *Begin)
+      : MCSection(SV_SPIRV, Name, K, Begin) {}
 
 public:
   ~MCSectionSPIRV() = default;

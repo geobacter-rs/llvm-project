@@ -915,7 +915,7 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
 
 void MCObjectFileInfo::initSPIRVMCObjectFileInfo(const Triple &T) {
   // Put everything in a single binary section
-  TextSection = Ctx->getSPIRVSection();
+  TextSection = Ctx->getSPIRVSection(".text");
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
