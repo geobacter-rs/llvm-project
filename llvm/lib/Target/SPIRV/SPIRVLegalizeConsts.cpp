@@ -141,8 +141,6 @@ public:
 } // namespace llvm
 INITIALIZE_PASS_BEGIN(SPIRVLegalizeConstsPass, DEBUG_TYPE,
                       "SPIRV legalize constant expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SPIRVLegalizeConstsPass, DEBUG_TYPE,
                     "SPIRV legalize constant expressions", false, false)
 

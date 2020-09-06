@@ -129,15 +129,16 @@ bool SPIRVCallLowering::lowerFormalArguments(
 }
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
-                                  CallingConv::ID CallConv,
-                                  const MachineOperand &Callee,
-                                  const ArgInfo &OrigRet,
-                                  ArrayRef<ArgInfo> OrigArgs) const {
+                                  CallLoweringInfo &Info) const {
   // TODO It's not clear if Info needs to be updated in any way.
   //      Why isn't it a const&?
   //      See https://reviews.llvm.org/D65850#inline-620779
   // TODO assert Info.CallConv has an appropriate value.
   // TODO Handle IsMustTailCall, IsTailCall, LoweredTailCall and IsVarArg.
+
+  const MachineOperand &Callee = Info.Callee;
+  const ArgInfo& OrigRet = Info.OrigRet;
+  ArrayRef<ArgInfo> OrigArgs = Info.OrigArgs;
 
   auto funcName = Callee.getGlobal()->getGlobalIdentifier();
 

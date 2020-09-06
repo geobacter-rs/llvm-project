@@ -305,7 +305,7 @@ SPIRVType *SPIRVPtrAnalysis::transTypeSpecMDInner(Type *Ty,
     ElemTy = PTy->getPointerElementType();
     SC = TR->addressSpaceToStorageClass(PTy->getAddressSpace());
   } else if (VTy) {
-    ElemTy = VTy->getVectorElementType();
+    ElemTy = VTy->getElementType();
   } else if (ATy) {
     ElemTy = ATy->getArrayElementType();
   }

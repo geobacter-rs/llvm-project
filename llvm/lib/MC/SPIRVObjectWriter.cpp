@@ -10,6 +10,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 
@@ -21,8 +22,8 @@ class SPIRVObjectWriter : public MCObjectWriter {
 
 public:
   SPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
-                    raw_pwrite_stream &OS)
-      : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {}
+                    raw_pwrite_stream &OS, support::endianness E)
+      : W(OS, E), TargetObjectWriter(std::move(MOTW)) {}
 
   ~SPIRVObjectWriter() override {}
 
@@ -72,6 +73,6 @@ uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm,
 
 std::unique_ptr<MCObjectWriter>
 llvm::createSPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
-                              raw_pwrite_stream &OS) {
-  return llvm::make_unique<SPIRVObjectWriter>(std::move(MOTW), OS);
+                              raw_pwrite_stream &OS, support::endianness E) {
+  return std::make_unique<SPIRVObjectWriter>(std::move(MOTW), OS, E);
 }

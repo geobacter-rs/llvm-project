@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVEXTINSTS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <string>
 
@@ -24,7 +25,7 @@ enum class ExtInstSet : std::uint32_t {
 };
 
 const char *getExtInstSetName(ExtInstSet e);
-ExtInstSet getExtInstSetFromString(const std::string &nameStr);
+ExtInstSet getExtInstSetFromString(const llvm::StringRef &nameStr);
 
 const char *getExtInstName(ExtInstSet set, std::uint32_t instNum);
 
@@ -47,7 +48,7 @@ const char *getExtInstName(ExtInstSet set, std::uint32_t instNum);
 
 #define DEF_NAME_TO_EXT_INST_FUNC_HEADER(EnumName)                             \
   llvm::Optional<EnumName::EnumName> get##EnumName##FromName(                  \
-      const std::string &name);
+      const llvm::StringRef &name);
 
 #define DEF_EXT_INST_NAME_FUNC_BODY(EnumName, DefEnumCommand)                  \
   const char *get##EnumName##Name(std::uint32_t e) {                           \
@@ -57,9 +58,10 @@ const char *getExtInstName(ExtInstSet set, std::uint32_t instNum);
 
 #define DEF_NAME_TO_EXT_INST_FUNC_BODY(EnumName, DefEnumCommand)               \
   llvm::Optional<EnumName::EnumName> get##EnumName##FromName(                  \
-      const std::string &name) {                                               \
-    static const std::map<std::string, EnumName::EnumName> nameToExtInstMap =  \
-        {DefEnumCommand(EnumName, MAKE_EXT_INST_NAME_TO_ID)};                  \
+      const llvm::StringRef &name) {                                           \
+    static const std::map<llvm::StringRef, EnumName::EnumName>                 \
+        nameToExtInstMap = {                                                   \
+            DefEnumCommand(EnumName, MAKE_EXT_INST_NAME_TO_ID)};               \
     auto found = nameToExtInstMap.find(name);                                  \
     if (found != nameToExtInstMap.end()) {                                     \
       return {found->second};                                                  \

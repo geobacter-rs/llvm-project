@@ -285,6 +285,7 @@ namespace llvm {
     std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
     std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
     std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
+    std::map<std::string, MCSectionSPIRV*> SpirvUniquingMap;
     StringMap<bool> RelSecNames;
 
     SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
@@ -565,7 +566,7 @@ namespace llvm {
                                     SectionKind K,
                                     const char *BeginSymName = nullptr);
 
-    MCSectionSPIRV *getSPIRVSection();
+    MCSectionSPIRV *getSPIRVSection(const StringRef& Section);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

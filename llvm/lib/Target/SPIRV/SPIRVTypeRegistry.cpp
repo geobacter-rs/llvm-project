@@ -396,9 +396,9 @@ SPIRVType *SPIRVTypeRegistry::createSPIRVType(const Type *Ty,
     return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
   } else if (Ty->isVoidTy()) {
     return getOpTypeVoid(MIRBuilder);
-  } else if (Ty->isVectorTy()) {
-    auto el = getOrCreateSPIRVType(Ty->getVectorElementType(), MIRBuilder);
-    return getOpTypeVector(Ty->getVectorNumElements(), el, MIRBuilder);
+  } else if (auto* VTy = dyn_cast<VectorType>(Ty)) {
+    auto el = getOrCreateSPIRVType(VTy->getElementType(), MIRBuilder);
+    return getOpTypeVector(VTy->getNumElements(), el, MIRBuilder);
   } else if (Ty->isArrayTy()) {
     if (Ty->getArrayNumElements() == 0) {
       SmallVector<SPIRVType *, 1> Members;

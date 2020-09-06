@@ -52,7 +52,7 @@ public:
 
   // State that we need MachineModuleInfo to operate on MachineFunctions
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineModuleInfo>();
+    AU.addRequired<MachineModuleInfoWrapperPass>();
   }
 };
 } // namespace
@@ -880,8 +880,8 @@ static void addGlobalRequirements(const SPIRVRequirementHandler &reqs,
 // Extract all OpType, OpConst etc. into this meta block
 // Number registers globally, including references to global OpType etc.
 bool SPIRVGlobalTypesAndRegNum::runOnModule(Module &M) {
-  auto &MMIWP = getAnalysis<MachineModuleInfo>();
-  MachineModuleInfo &MMI = MMIWP;
+  auto &MMIWP = getAnalysis<MachineModuleInfoWrapperPass>();
+  MachineModuleInfo &MMI = MMIWP.getMMI();
 
   MachineIRBuilder MIRBuilder;
   initMetaBlockBuilder(M, MMI, MIRBuilder);

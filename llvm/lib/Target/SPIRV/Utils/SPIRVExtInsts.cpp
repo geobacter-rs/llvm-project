@@ -28,7 +28,7 @@ const char *getExtInstSetName(ExtInstSet e) {
   return "UNKNOWN_EXT_INST_SET";
 }
 
-ExtInstSet getExtInstSetFromString(const std::string &nameStr) {
+ExtInstSet getExtInstSetFromString(const StringRef &nameStr) {
   for (auto set : {ExtInstSet::GLSL_std_450, ExtInstSet::OpenCL_std}) {
     if (nameStr == getExtInstSetName(set)) {
       return set;

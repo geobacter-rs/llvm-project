@@ -37,7 +37,8 @@
 #include <string>
 
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/PassSupport.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 InstructionSelector *
@@ -45,7 +46,7 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                SPIRVSubtarget &Subtarget,
                                SPIRVRegisterBankInfo &RBI);
 
-extern "C" void LLVMInitializeSPIRVTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   // Register the target.
   RegisterTargetMachine<SPIRVTargetMachine> X(getTheSPIRV32Target());
   RegisterTargetMachine<SPIRVTargetMachine> Y(getTheSPIRV64Target());
@@ -93,7 +94,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()),
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
   setGlobalISel(true);

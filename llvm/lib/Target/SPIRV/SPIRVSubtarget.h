@@ -114,8 +114,8 @@ public:
 
   // This constructor initializes the data members to match that
   // of the specified triple.
-  SPIRVSubtarget(const Triple &TT, const std::string &CPU,
-                 const std::string &FS, const SPIRVTargetMachine &TM);
+  SPIRVSubtarget(const Triple &TT, const StringRef &CPU,
+                 const StringRef &FS, const SPIRVTargetMachine &TM);
 
   SPIRVSubtarget &initSubtargetDependencies(StringRef CPU, StringRef FS);
 

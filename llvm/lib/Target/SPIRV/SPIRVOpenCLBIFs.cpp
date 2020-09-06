@@ -941,7 +941,7 @@ bool llvm::generateOpenCLBuiltinCall(const StringRef demangledName,
   }
 
   namespace CL = OpenCL_std;
-  static const std::map<std::string, std::vector<CL::OpenCL_std>>
+  static const std::map<StringRef, std::vector<CL::OpenCL_std>>
       typeDependantExtInstMap = {
           {"clamp", {CL::u_clamp, CL::s_clamp, CL::fclamp}},
           {"max", {CL::u_max, CL::s_max, CL::fmax_common}},
