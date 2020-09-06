@@ -23,7 +23,7 @@ Target &getTheSPIRVLogicalTarget() {
   return TheSPIRVTarget;
 }
 
-extern "C" void LLVMInitializeSPIRVTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTargetInfo() {
   RegisterTarget<Triple::spirv32, /*HasJIT=*/false> X(
       getTheSPIRV32Target(), "spirv32", "SPIRV", "SPIRV");
   RegisterTarget<Triple::spirv64, /*HasJIT=*/false> Y(

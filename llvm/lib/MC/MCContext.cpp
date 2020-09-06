@@ -692,10 +692,19 @@ MCSectionXCOFF *MCContext::getXCOFFSection(StringRef Section,
   return Result;
 }
 
-MCSectionSPIRV *MCContext::getSPIRVSection() {
+MCSectionSPIRV *MCContext::getSPIRVSection(const StringRef& Section) {
+
+  // Do the lookup, if we have a hit, return it.
+  auto IterBool = SpirvUniquingMap.insert(
+      std::make_pair(Section.str(), nullptr));
+  auto &Entry = *IterBool.first;
+  if (!IterBool.second)
+    return Entry.second;
+
   MCSymbol *Begin = nullptr;
   MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate())
-      MCSectionSPIRV(SectionKind::getText(), Begin);
+      MCSectionSPIRV(Section, SectionKind::getText(), Begin);
+  Entry.second = Result;
 
   auto *F = new MCDataFragment();
   Result->getFragmentList().insert(Result->begin(), F);
