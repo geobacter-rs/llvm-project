@@ -65,21 +65,18 @@ std::vector<SPIRVType *> *
 SPIRVTypeRegistry::getExistingTypesForOpcode(unsigned opcode) {
   auto found = OpcodeToSPIRVTypeMap.find(opcode);
   if (found == OpcodeToSPIRVTypeMap.end()) {
-    auto types = new std::vector<SPIRVType *>;
-    OpcodeToSPIRVTypeMap.insert({opcode, types});
-    return types;
+    auto types = std::make_unique<std::vector<SPIRVType *>>();
+    auto I = OpcodeToSPIRVTypeMap.insert({opcode, std::move(types)});
+    return I.first->getSecond().get();
   } else {
-    return found->second;
+    return found->second.get();
   }
 }
 
 void SPIRVTypeRegistry::reset() {
-  VRegToTypeMap.shrink_and_clear();
-  TypeToSPIRVTypeMap.shrink_and_clear();
-  for (const auto &t : OpcodeToSPIRVTypeMap) {
-    delete t.second;
-  }
-  OpcodeToSPIRVTypeMap.shrink_and_clear();
+  VRegToTypeMap.clear();
+  TypeToSPIRVTypeMap.clear();
+  OpcodeToSPIRVTypeMap.clear();
 }
 
 SPIRVType *SPIRVTypeRegistry::assignTypeToVReg(const Type *type, Register VReg,
