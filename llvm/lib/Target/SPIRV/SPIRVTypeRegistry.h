@@ -58,6 +58,14 @@ public:
   createSPIRVType(const Type *type, MachineIRBuilder &MIRBuilder,
                   AccessQualifier accessQual = AccessQualifier::ReadWrite);
 
+  struct AssignTypeData {
+    Register VReg;
+    SPIRVType* Ty;
+  };
+  SmallVector<AssignTypeData, 64> AssignTypes;
+
+  void assignTypes(MachineFunction& MF);
+
 public:
   SPIRVTypeRegistry(unsigned int pointerSize);
 

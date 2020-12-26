@@ -237,6 +237,8 @@ bool SPIRVIRTranslator::runOnMachineFunction(MachineFunction &MF) {
   // Run the regular IRTranslator
   bool success = IRTranslator::runOnMachineFunction(MF);
 
+  TR->assignTypes(MF);
+
   // Clean up
   TR->reset();
   this->PtrAnalysis = None;
