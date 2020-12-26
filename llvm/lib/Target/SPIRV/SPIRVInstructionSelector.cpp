@@ -59,6 +59,8 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName() { return DEBUG_TYPE; }
 
+  void setupGeneratedPerFunctionState(MachineFunction &MF) override { }
+
 private:
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
