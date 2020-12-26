@@ -1244,7 +1244,9 @@ void AsmPrinter::emitFunctionBody() {
   }
 
   // Switch to the original section in case basic block sections was used.
-  OutStreamer->SwitchSection(MF->getSection());
+  if(auto* Section = MF->getSection()) {
+    OutStreamer->SwitchSection(Section);
+  }
 
   const Function &F = MF->getFunction();
   for (const auto &BB : F) {
