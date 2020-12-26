@@ -47,7 +47,8 @@ public:
   DenseMap<const Value *, SPIRVType *> ValueToSPIRVTypeMap;
 
   // Maps OpTypeXXX opcode to a list of OpTypeXXX instrs (for deduplication).
-  DenseMap<unsigned, std::vector<SPIRVType *> *> OpcodeToSPIRVTypeMap;
+  DenseMap<unsigned, std::unique_ptr<std::vector<SPIRVType *>>>
+      OpcodeToSPIRVTypeMap;
 
   // Number of bits pointers and size_t integers require.
   const unsigned int pointerSize;
