@@ -92,10 +92,10 @@ void SPIRVTypeRegistry::assignSPIRVTypeToVReg(SPIRVType *spirvType,
                                              Register VReg,
                                              MachineIRBuilder &MIRBuilder) {
   VRegToTypeMap[VReg] = spirvType;
-  auto MIB = MIRBuilder.buildInstr(SPIRV::ASSIGN_TYPE)
-                 .addUse(getSPIRVTypeID(spirvType))
-                 .addUse(VReg);
-  constrainRegOperands(MIB);
+  const AssignTypeData D = {
+      VReg, spirvType,
+  };
+  AssignTypes.emplace_back(D);
 }
 
 static Register createTypeVReg(MachineIRBuilder &MIRBuilder) {
@@ -680,4 +680,20 @@ bool SPIRVTypeRegistry::constrainRegOperands(MachineInstrBuilder &MIB) const {
   const RegisterBankInfo *RBI = subtarget.getRegBankInfo();
 
   return constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *RBI);
+}
+void SPIRVTypeRegistry::assignTypes(MachineFunction &MF) {
+  for (auto &Pair : AssignTypes) {
+    const auto& VReg = Pair.VReg;
+    auto* Ty = Pair.Ty;
+    auto& RI = MF.getRegInfo();
+    // set the insertion point to be just after the defining instruction.
+    MachineInstr* MI = RI.getVRegDef(VReg);
+    MachineBasicBlock* MBB = MI->getParent();
+    MachineIRBuilder MIRBuilder(*MBB, MI);
+    auto MIB = MIRBuilder.buildInstr(SPIRV::ASSIGN_TYPE)
+        .addUse(getSPIRVTypeID(Ty))
+        .addUse(VReg);
+    constrainRegOperands(MIB);
+  }
+  AssignTypes.clear();
 }
