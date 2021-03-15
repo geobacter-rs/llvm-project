@@ -560,7 +560,6 @@ void SPIRVPtrAnalysis::visitGetElementPtrInst(GetElementPtrInst &I) {
   return;
 }
 void SPIRVPtrAnalysis::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  I.getFunction()->getParent()->dump();
   auto SC = TR->addressSpaceToStorageClass(I.getDestAddressSpace());
   auto *PteTy = getPointerElemTy();
 
