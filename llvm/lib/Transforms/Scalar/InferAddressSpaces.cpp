@@ -617,6 +617,18 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
   case Instruction::IntToPtr: {
     assert(isNoopPtrIntCastPair(cast<Operator>(I), *DL, TTI));
     Value *Src = cast<Operator>(I->getOperand(0))->getOperand(0);
+    // Ensure `Src` is flat by looking through address space casts: the source
+    // address space must be specific, but we could have:
+    //
+    // %1 = addrspacecast {} addrspace(5)* %0 to {}*
+    // %2 = ptrtoint {}* %1 to i64
+    // %3 = inttoptr i64 %2 to i64*
+    //
+    // Before the following if, Src := %1, but Src must be the "source" space
+    // by algorithm.
+    if(auto* AddrCast = dyn_cast<AddrSpaceCastInst>(Src)) {
+      Src = AddrCast->getPointerOperand();
+    }
     assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
     if (Src->getType() != NewPtrType)
       return new BitCastInst(Src, NewPtrType);
