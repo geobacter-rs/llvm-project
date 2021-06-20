@@ -17,6 +17,7 @@
 #include "SPIRVIRTranslator.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
+#include "llvm/CodeGen/CodeGenPassBuilder.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
@@ -168,7 +169,7 @@ void SPIRVPassConfig::addISelPrepare() {
   addPass(createInstructionCombiningPass());
   addPass(createSPIRVLegalizeConstsPass());
   addPass(createInferAddressSpacesPass(4));
-  addPass(createDeadInstEliminationPass());
+  addPass(&DeadMachineInstructionElimID);
   addPass(createLoopSimplifyPass());
   addPass(createStructurizeCFGPass());
 }

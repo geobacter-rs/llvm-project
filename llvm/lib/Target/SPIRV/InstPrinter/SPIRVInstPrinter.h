@@ -26,6 +26,8 @@ private:
 public:
   using MCInstPrinter::MCInstPrinter;
 
+  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
+
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,

@@ -21,6 +21,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTypeRegistry.h"
 
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
@@ -29,9 +30,9 @@ SPIRVCallLowering::SPIRVCallLowering(const SPIRVTargetLowering &TLI,
                                      SPIRVTypeRegistry *TR)
     : CallLowering(&TLI), TR(TR) {}
 
-bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                    const Value *Val,
-                                    ArrayRef<Register> VRegs) const {
+bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                                    ArrayRef<Register> VRegs,
+                                    FunctionLoweringInfo &FLI) const {
   assert(VRegs.size() < 2 && "All return types should use a single register");
   if (Val) {
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpReturnValue).addUse(VRegs[0]);
@@ -61,8 +62,10 @@ static uint32_t getFunctionControl(const Function &F) {
 }
 
 bool SPIRVCallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+    MachineIRBuilder &MIRBuilder,
+    const Function &F,
+    ArrayRef<ArrayRef<Register>> VRegs,
+    FunctionLoweringInfo &FLI) const {
 
   assert(TR && "Must initialize the SPIRV type registry before lowering args.");
 
@@ -174,13 +177,16 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     auto M = MIRBuilder.getMF().getFunction().getParent();
     Function *calledFunc = M->getFunction(funcName);
     if (calledFunc && calledFunc->isDeclaration()) {
+      auto &MF = MIRBuilder.getMF();
+
+      FunctionLoweringInfo FuncInfo;
+      FuncInfo.set(*calledFunc, MF, nullptr);
       // Emit the type info and forward function declaration to the first MBB
       // to ensure VReg definition dependencies are valid across all MBBs
       MachineIRBuilder firstBlockBuilder;
-      auto &MF = MIRBuilder.getMF();
       firstBlockBuilder.setMF(MF);
       firstBlockBuilder.setMBB(*MF.getBlockNumbered(0));
-      lowerFormalArguments(firstBlockBuilder, *calledFunc, {});
+      lowerFormalArguments(firstBlockBuilder, *calledFunc, {}, FuncInfo);
     }
 
     // Make sure there's a valid return reg, even for functions returning void

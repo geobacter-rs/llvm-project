@@ -79,7 +79,7 @@ static bool computeOpenCLFullProfile(const Triple &TT) { return true; }
 SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const StringRef &CPU,
                                const StringRef &FS,
                                const SPIRVTargetMachine &TM)
-    : SPIRVGenSubtargetInfo(TT, CPU, FS), InstrInfo(),
+    : SPIRVGenSubtargetInfo(TT, CPU, CPU, FS), InstrInfo(),
       FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       pointerSize(computePointerSize(TT)),
       usesLogicalAddressing(TT.isSPIRVLogical()),
@@ -118,7 +118,7 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
 #undef DEF_CAP_FEATURES
 #undef MAKE_CAP_FEATURE_FIELDS
 
-  ParseSubtargetFeatures(CPU, FS);
+  ParseSubtargetFeatures(CPU, CPU, FS);
   return *this;
 }
 

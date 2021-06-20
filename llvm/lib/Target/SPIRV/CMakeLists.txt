@@ -1,3 +1,5 @@
+add_llvm_component_group(SPIRV)
+
 set(LLVM_TARGET_DEFINITIONS SPIRV.td)
 
 tablegen(LLVM SPIRVGenAsmWriter.inc -gen-asm-writer)
@@ -35,6 +37,26 @@ add_llvm_target(SPIRVCodeGen
   SPIRVStructCF.cpp
   SPIRVTargetMachine.cpp
   SPIRVTypeRegistry.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  IPO
+  MC
+  Passes
+  SPIRVAsmPrinter
+  SPIRVDesc
+  SPIRVInfo
+  SPIRVUtils
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  Vectorize
+  BinaryFormat
   )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Utils)

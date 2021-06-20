@@ -29,12 +29,15 @@ public:
   SPIRVCallLowering(const SPIRVTargetLowering &TLI, SPIRVTypeRegistry *TR);
 
   // Built OpReturn or OpReturnValue
-  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   ArrayRef<Register> VReg) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                   ArrayRef<Register> VRegs,
+                   FunctionLoweringInfo &FLI) const override;
 
   // Build OpFunction, OpFunctionParameter, and any EntryPoint or Linkage data
-  bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+  bool lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                            const Function &F,
+                            ArrayRef<ArrayRef<Register>> VRegs,
+                            FunctionLoweringInfo &FLI) const override;
 
   // Build OpCall, or replace with a builtin function
   bool lowerCall(MachineIRBuilder &MIRBuilder,
