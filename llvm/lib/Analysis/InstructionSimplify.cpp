@@ -2522,10 +2522,28 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // stripAndComputeConstantOffsets left off and accumulate the offsets.
     Constant *LHSNoBound = stripAndComputeConstantOffsets(DL, LHS, true);
     Constant *RHSNoBound = stripAndComputeConstantOffsets(DL, RHS, true);
-    if (LHS == RHS)
+    if (LHS == RHS) {
+      std::array<Type*, 4> Types = {
+          LHSOffset->getType(), RHSOffset->getType(),
+          LHSNoBound->getType(), RHSNoBound->getType()
+      };
+      Type* WidestType = *std::max_element(Types.begin(), Types.end(), [](Type* L, Type* R) {
+        return L->getScalarSizeInBits() < R->getScalarSizeInBits();
+      });
+      auto Widen = [&](Constant* C) {
+        if(C->getType()->getScalarSizeInBits() < WidestType->getScalarSizeInBits()) {
+          C = ConstantExpr::getZExt(C, WidestType);
+        }
+        return C;
+      };
+      LHSNoBound = Widen(LHSNoBound);
+      RHSNoBound = Widen(RHSNoBound);
+      LHSOffset = Widen(LHSOffset);
+      RHSOffset = Widen(RHSOffset);
       return ConstantExpr::getICmp(Pred,
                                    ConstantExpr::getAdd(LHSOffset, LHSNoBound),
                                    ConstantExpr::getAdd(RHSOffset, RHSNoBound));
+    }
 
     // If one side of the equality comparison must come from a noalias call
     // (meaning a system memory allocation function), and the other side must
